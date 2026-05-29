@@ -11,8 +11,12 @@ public enum PizzaType
 public class PizzaPlate : MonoBehaviour
 {
     [Tooltip("Dùng tạm để test thuật toán tuần 1")]
-    public PizzaType Type = PizzaType.Pho_mai;
+    [SerializeField] private PizzaType _type = PizzaType.Pho_mai;
+    public PizzaType Type => _type;
     
+    [SerializeField] private float _spawnHeight = 1f;
+    [SerializeField] private float _pickUpOffset = 0.5f;
+
     private Vector3 _originalPosition;
     private Transform _originalParent;
 
@@ -20,14 +24,14 @@ public class PizzaPlate : MonoBehaviour
     {
         _originalParent = parentSlot;
         transform.SetParent(parentSlot);
-        transform.localPosition = new Vector3(0, 1f, 0); // Sinh cách khoảng y = 1
+        transform.localPosition = new Vector3(0, _spawnHeight, 0); // Sinh cách khoảng y
         _originalPosition = transform.position;
     }
 
     public void PickUp()
     {
         // Nâng đĩa lên một chút theo trục Y để tạo hiệu ứng nhấc lên
-        transform.position = new Vector3(transform.position.x, _originalPosition.y + 0.5f, transform.position.z);
+        transform.position = new Vector3(transform.position.x, _originalPosition.y + _pickUpOffset, transform.position.z);
     }
 
     public void DragTo(Vector3 worldPosition)

@@ -7,6 +7,7 @@ public class LevelGenerator
     [MenuItem("Tools/Generate 30 Levels")]
     public static void Generate()
     {
+        const int DEFAULT_HOLD_SLOT_COUNT = 3;
         string folderPath = Path.Combine(Application.dataPath, "Resources", "Levels");
         if (!Directory.Exists(folderPath))
         {
@@ -23,7 +24,7 @@ public class LevelGenerator
                 levelId = i, 
                 gridWidth = w, 
                 gridHeight = h,
-                holdSlotCount = 3 
+                holdSlotCount = DEFAULT_HOLD_SLOT_COUNT 
             };
             string json = JsonUtility.ToJson(data, true);
             

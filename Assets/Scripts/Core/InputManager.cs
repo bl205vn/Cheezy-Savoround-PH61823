@@ -6,7 +6,22 @@ public class InputManager : MonoBehaviour
     private Camera _mainCamera;
     private PizzaPlate _draggedPlate;
     private Plane _dragPlane;
-    private float _dragHeight = 1.0f; // Độ cao của đĩa khi kéo
+    [SerializeField] private float _dragHeight = 1.0f; // Độ cao của đĩa khi kéo
+    [SerializeField] private LayerMask _gridLayerMask = Physics.DefaultRaycastLayers;
+
+    private const float DEBUG_RAY_LENGTH = 5f;
+    private const float DEBUG_RAY_DURATION = 2f;
+
+    private readonly RaycastHit[] _hitBuffer = new RaycastHit[10];
+
+    private struct HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>
+    {
+        public int Compare(RaycastHit x, RaycastHit y)
+        {
+            return x.distance.CompareTo(y.distance);
+        }
+    }
+    private readonly HitDistanceComparer _hitComparer = new HitDistanceComparer();
 
     public static event Action<PizzaPlate, GridCell> OnPlatePlaced;
 
@@ -60,7 +75,7 @@ public class InputManager : MonoBehaviour
             _draggedPlate.DragTo(worldPos);
 
             // Vẽ gizmo (Debug Ray) màu cam đậm hướng xuống dưới khi đang kéo
-            Debug.DrawRay(_draggedPlate.transform.position, Vector3.down * 5f, new Color(1.0f, 0.5f, 0.0f));
+            Debug.DrawRay(_draggedPlate.transform.position, Vector3.down * DEBUG_RAY_LENGTH, new Color(1.0f, 0.5f, 0.0f));
         }
     }
 
@@ -70,12 +85,15 @@ public class InputManager : MonoBehaviour
         Ray ray = new Ray(_draggedPlate.transform.position, Vector3.down);
         
         // Vẽ gizmo (Debug Ray) màu cam đậm lưu lại 2 giây để dễ quan sát khi nhả chuột
-        Debug.DrawRay(ray.origin, ray.direction * 5f, new Color(1.0f, 0.5f, 0.0f), 2f);
+        Debug.DrawRay(ray.origin, ray.direction * DEBUG_RAY_LENGTH, new Color(1.0f, 0.5f, 0.0f), DEBUG_RAY_DURATION);
 
-        // Dùng RaycastAll để tia có thể đi xuyên qua đĩa đang cản đường (nếu đĩa cũ có collider to che mất)
-        RaycastHit[] hits = Physics.RaycastAll(ray);
-        foreach (var hit in hits)
+        // Dùng RaycastNonAlloc để tránh GC Alloc mỗi lần thả đĩa
+        int hitCount = Physics.RaycastNonAlloc(ray, _hitBuffer, 100f, _gridLayerMask);
+        Array.Sort(_hitBuffer, 0, hitCount, _hitComparer);
+
+        for (int i = 0; i < hitCount; i++)
         {
+            var hit = _hitBuffer[i];
             if (hit.collider.TryGetComponent(out GridCell cell) && !cell.IsOccupied)
             {
                 // Snap vào ô lưới

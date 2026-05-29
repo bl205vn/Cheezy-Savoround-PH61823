@@ -8,7 +8,17 @@ public class GridManager : MonoBehaviour
     [SerializeField] private float _cellSpacing = 1.0f; // Khoảng cách giữa các ô
 
     // Dictionary lưu trạng thái các ô
-    private Dictionary<Vector2Int, GameObject> _gridCells = new Dictionary<Vector2Int, GameObject>();
+    private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
+
+    // Cache cho thuật toán quét để tránh cấp phát rác (Zero GC)
+    private static readonly Vector2Int[] _directions = new Vector2Int[]
+    {
+        Vector2Int.up,    // (0, 1)
+        Vector2Int.down,  // (0, -1)
+        Vector2Int.left,  // (-1, 0)
+        Vector2Int.right  // (1, 0)
+    };
+    private readonly List<GridCell> _matchingCells = new List<GridCell>();
 
     public void GenerateGrid(int levelId, int width, int height)
     {
@@ -40,7 +50,7 @@ public class GridManager : MonoBehaviour
                 }
                 cellComp.Initialize(gridPos);
                 
-                _gridCells[gridPos] = cellObj;
+                _gridCells[gridPos] = cellComp;
             }
         }
         
@@ -53,7 +63,7 @@ public class GridManager : MonoBehaviour
         {
             if (cell != null)
             {
-                Destroy(cell);
+                Destroy(cell.gameObject);
             }
         }
         _gridCells.Clear();
@@ -71,9 +81,9 @@ public class GridManager : MonoBehaviour
 
     public GridCell GetCell(Vector2Int gridPos)
     {
-        if (_gridCells.TryGetValue(gridPos, out GameObject cellObj))
+        if (_gridCells.TryGetValue(gridPos, out GridCell cell))
         {
-            return cellObj.GetComponent<GridCell>();
+            return cell;
         }
         return null;
     }
@@ -85,21 +95,13 @@ public class GridManager : MonoBehaviour
 
     private void CheckAdjacentCells(Vector2Int centerPos)
     {
-        Vector2Int[] directions = new Vector2Int[]
-        {
-            Vector2Int.up,    // (0, 1)
-            Vector2Int.down,  // (0, -1)
-            Vector2Int.left,  // (-1, 0)
-            Vector2Int.right  // (1, 0)
-        };
-
         GridCell centerCell = GetCell(centerPos);
         if (centerCell == null || !centerCell.IsOccupied) return;
 
         PizzaPlate centerPlate = centerCell.CurrentPlate;
-        List<GridCell> matchingCells = new List<GridCell>();
+        _matchingCells.Clear();
 
-        foreach (var dir in directions)
+        foreach (var dir in _directions)
         {
             GridCell neighbor = GetCell(centerPos + dir);
             if (neighbor != null && neighbor.IsOccupied)
@@ -107,16 +109,16 @@ public class GridManager : MonoBehaviour
                 // Kiểm tra cùng loại đĩa (Mock cho Tuần 1 vì chưa có miếng pizza)
                 if (neighbor.CurrentPlate.Type == centerPlate.Type)
                 {
-                    matchingCells.Add(neighbor);
+                    _matchingCells.Add(neighbor);
                 }
             }
         }
 
         // Log kết quả
-        if (matchingCells.Count > 0)
+        if (_matchingCells.Count > 0)
         {
             string log = $"[Thuật toán quét] Đĩa {centerPlate.Type} tại ô {centerPos} trùng khớp với các ô:";
-            foreach (var match in matchingCells)
+            foreach (var match in _matchingCells)
             {
                 log += $" {match.GridPosition}";
             }
