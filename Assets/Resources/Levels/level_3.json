@@ -1,6 +1,6 @@
 {
-    "levelId": 3,
-    "gridWidth": 3,
-    "gridHeight": 3,
-    "holdSlotCount": 3
+  "levelId": 3,
+  "gridWidth": 4,
+  "gridHeight": 6,
+  "holdSlotCount": 3
 }

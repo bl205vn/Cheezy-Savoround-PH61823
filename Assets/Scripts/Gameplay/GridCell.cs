@@ -6,7 +6,7 @@ public class GridCell : MonoBehaviour
     public bool IsOccupied { get; private set; }
     public PizzaPlate CurrentPlate { get; private set; }
 
-    [SerializeField] private float _snapOffsetY = 0.2f;
+    [SerializeField] private float _snapOffsetY = 0f;
 
     public void Initialize(Vector2Int gridPos)
     {

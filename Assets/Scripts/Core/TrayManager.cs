@@ -3,65 +3,66 @@ using UnityEngine;
 
 public class TrayManager : MonoBehaviour
 {
-    [SerializeField] private GameObject _slotPrefabLight; // Prefab ô khay màu sáng (chẵn)
-    [SerializeField] private GameObject _slotPrefabDark;  // Prefab ô khay màu tối (lẻ)
-    [SerializeField] private float _slotSpacing = 1.2f; // Khoảng cách giữa các ô khay
+    [SerializeField] private float _slotSpacing; // Khoảng cách giữa các slot
     [SerializeField] private GameObject _pizzaPlatePrefab; // Prefab đĩa pizza
 
-    // Lưu trữ các ô khay
-    private List<GameObject> _slots = new List<GameObject>();
+    // Lưu trữ các slot anchor (empty GO) để quản lý vòng đời
+    private List<GameObject> _slotAnchors = new List<GameObject>();
 
     public void GenerateTray(int slotCount)
     {
         ClearTray();
 
-        // Tính toán offset để căn giữa các khay
+        if (_pizzaPlatePrefab == null)
+        {
+            Debug.LogError("[TrayManager] _pizzaPlatePrefab chưa được gán!");
+            return;
+        }
+
+        // Tính toán offset để căn giữa
         float offsetX = (slotCount - 1) * _slotSpacing * 0.5f;
 
         for (int i = 0; i < slotCount; i++)
         {
-            Vector3 localPos = new Vector3(i * _slotSpacing - offsetX, 0, 0); // Khay đĩa chỉ xếp trên trục X
+            Vector3 localPos = new Vector3(i * _slotSpacing - offsetX, 0, 0);
             Vector3 worldPos = transform.position + localPos;
 
-            bool isEven = i % 2 == 0;
-            GameObject prefabToUse = isEven ? _slotPrefabLight : _slotPrefabDark;
+            // Tạo empty GO làm điểm neo (thay thế slot prefab cũ)
+            GameObject anchor = new GameObject($"TraySlot_{i}");
+            anchor.transform.SetParent(transform);
+            anchor.transform.position = worldPos;
 
-            GameObject slot = Instantiate(prefabToUse, worldPos, Quaternion.identity, transform);
-            slot.name = $"TraySlot_{i}";
-            
-            if (_pizzaPlatePrefab != null)
+            // Sinh đĩa pizza vào tâm anchor
+            GameObject plateObj = Instantiate(_pizzaPlatePrefab, worldPos, Quaternion.identity, anchor.transform);
+            PizzaPlate plate = plateObj.GetComponent<PizzaPlate>();
+            if (plate == null)
             {
-                GameObject plateObj = Instantiate(_pizzaPlatePrefab, slot.transform.position, Quaternion.identity, slot.transform);
-                PizzaPlate plate = plateObj.GetComponent<PizzaPlate>();
-                if (plate == null)
-                {
-                    plate = plateObj.AddComponent<PizzaPlate>();
-                }
-                plate.Initialize(slot.transform);
+                plate = plateObj.AddComponent<PizzaPlate>();
             }
+            plate.Initialize(anchor.transform);
 
-            _slots.Add(slot);
+            _slotAnchors.Add(anchor);
         }
         
-        Debug.Log($"[TrayManager] Đã tạo thành công khay chứa gồm {slotCount} ô.");
+        Debug.Log($"[TrayManager] Đã sinh {slotCount} đĩa pizza trên khay.");
     }
 
     private void ClearTray()
     {
-        foreach (var slot in _slots)
+        foreach (var anchor in _slotAnchors)
         {
-            if (slot != null)
+            if (anchor != null)
             {
-                Destroy(slot);
+                Destroy(anchor);
             }
         }
-        _slots.Clear();
+        _slotAnchors.Clear();
     }
 
 #if UNITY_EDITOR
     public void DrawGizmos(int slotCount)
     {
-        Gizmos.color = Color.cyan; // Khay đĩa sẽ dùng viền Xanh Dương
+        Gizmos.color = Color.cyan;
         float offsetX = (slotCount - 1) * _slotSpacing * 0.5f;
 
         for (int i = 0; i < slotCount; i++)
@@ -70,7 +71,7 @@ public class TrayManager : MonoBehaviour
             Vector3 worldPos = transform.position + localPos;
             
             // Vẽ khung vuông phẳng (2D trên mặt phẳng XZ)
-            Vector3 size = new Vector3(_slotSpacing, 0f, _slotSpacing) * 0.95f; 
+            Vector3 size = new Vector3(_slotSpacing, 0f, _slotSpacing); 
             Gizmos.DrawWireCube(worldPos, size);
         }
     }

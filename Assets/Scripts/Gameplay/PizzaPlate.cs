@@ -14,7 +14,7 @@ public class PizzaPlate : MonoBehaviour
     [SerializeField] private PizzaType _type = PizzaType.Pho_mai;
     public PizzaType Type => _type;
     
-    [SerializeField] private float _spawnHeight = 1f;
+    [SerializeField] private float _spawnHeight = 0f;
     [SerializeField] private float _pickUpOffset = 0.5f;
 
     private Vector3 _originalPosition;

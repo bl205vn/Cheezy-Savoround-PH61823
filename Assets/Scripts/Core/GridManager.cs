@@ -3,9 +3,12 @@ using UnityEngine;
 
 public class GridManager : MonoBehaviour
 {
-    [SerializeField] private GameObject _cellPrefabLight; // Prefab ô màu sáng (chẵn)
-    [SerializeField] private GameObject _cellPrefabDark;  // Prefab ô màu tối (lẻ)
+    [SerializeField] private GameObject _cellPrefab;
     [SerializeField] private float _cellSpacing = 1.0f; // Khoảng cách giữa các ô
+    
+    [Header("Visual")]
+    [SerializeField] private Color _lightCellColor = new Color(0.9f, 0.85f, 0.7f); // Màu sáng (lẻ)
+    [SerializeField] private Color _darkCellColor = new Color(0.55f, 0.5f, 0.35f);  // Màu tối hơn (chẵn)
 
     // Dictionary lưu trạng thái các ô
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
@@ -36,12 +39,15 @@ public class GridManager : MonoBehaviour
                 Vector3 localPos = new Vector3(x * _cellSpacing - offsetX, 0, y * _cellSpacing - offsetZ);
                 Vector3 worldPos = transform.position + localPos; // Sinh lưới theo vị trí thực của GridManager
                 
-                // Thuật toán Checkerboard (Bàn cờ caro)
-                bool isEven = (x + y) % 2 == 0;
-                GameObject prefabToUse = isEven ? _cellPrefabLight : _cellPrefabDark;
-                
-                GameObject cellObj = Instantiate(prefabToUse, worldPos, Quaternion.identity, transform);
+                GameObject cellObj = Instantiate(_cellPrefab, worldPos, Quaternion.identity, transform);
                 cellObj.name = $"Cell_{x}_{y}";
+                
+                // Ép scale prefab theo kích thước ô grid
+                FitPrefabToCell(cellObj);
+                
+                // Checkerboard: chẵn = tối, lẻ = sáng
+                bool isEven = (x + y) % 2 == 0;
+                ApplyCellColor(cellObj, isEven ? _darkCellColor : _lightCellColor);
                 
                 GridCell cellComp = cellObj.GetComponent<GridCell>();
                 if (cellComp == null) 
@@ -55,6 +61,44 @@ public class GridManager : MonoBehaviour
         }
         
         Debug.Log($"[GridManager] Đã tạo thành công lưới {width}x{height} cho màn {levelId}");
+    }
+
+    /// <summary>
+    /// Ép scale prefab vào đúng kích thước 1 ô grid dựa trên Renderer bounds.
+    /// </summary>
+    private void FitPrefabToCell(GameObject cellObj)
+    {
+        Renderer rend = cellObj.GetComponentInChildren<Renderer>();
+        if (rend == null) return;
+
+        Vector3 currentSize = rend.bounds.size;
+        
+        // Chỉ scale theo trục X và Z (mặt phẳng ngang), giữ nguyên tỷ lệ Y
+        float scaleX = (currentSize.x > 0.001f) ? (_cellSpacing / currentSize.x) : 1f;
+        float scaleZ = (currentSize.z > 0.001f) ? (_cellSpacing / currentSize.z) : 1f;
+        
+        // Dùng scale nhỏ nhất để giữ tỷ lệ, khít hoàn toàn
+        float uniformScale = Mathf.Min(scaleX, scaleZ);
+        
+        cellObj.transform.localScale = cellObj.transform.localScale * uniformScale;
+    }
+
+    /// <summary>
+    /// Đổi màu tất cả Renderer con của cell (Material).
+    /// Dùng MaterialPropertyBlock để tránh tạo instance material mới gây rác.
+    /// </summary>
+    private void ApplyCellColor(GameObject cellObj, Color color)
+    {
+        Renderer[] renderers = cellObj.GetComponentsInChildren<Renderer>();
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        
+        foreach (var rend in renderers)
+        {
+            rend.GetPropertyBlock(block);
+            block.SetColor("_Color", color);     // Standard shader
+            block.SetColor("_BaseColor", color);  // URP/HDRP shader
+            rend.SetPropertyBlock(block);
+        }
     }
 
     private void ClearGrid()
@@ -145,7 +189,7 @@ public class GridManager : MonoBehaviour
                 Vector3 worldPos = transform.position + localPos; // Vẽ theo vị trí của GridManager
                 
                 // Vẽ khung vuông phẳng (2D trên mặt phẳng XZ) kích thước bằng 95% ô lưới
-                Vector3 size = new Vector3(_cellSpacing, 0f, _cellSpacing) * 0.95f; 
+                Vector3 size = new Vector3(_cellSpacing, 0f, _cellSpacing) * 1f; 
                 Gizmos.DrawWireCube(worldPos, size);
             }
         }

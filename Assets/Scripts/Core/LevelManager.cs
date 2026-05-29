@@ -7,6 +7,9 @@ public class LevelManager : MonoBehaviour
     
     [Header("Testing")]
     [SerializeField] private TextAsset _testLevelJson; // Kéo file JSON vào đây để test trực tiếp
+    
+    [Header("Debug")]
+    [SerializeField] private bool _showDebugGizmos = false; // Tích để hiện đường Gizmo trong Scene
 
     private void Start()
     {
@@ -50,6 +53,8 @@ public class LevelManager : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
+        if (!_showDebugGizmos) return;
+        
         // Preview level trong Editor mà không cần Play
         if (_testLevelJson != null && _gridManager != null && _trayManager != null)
         {
