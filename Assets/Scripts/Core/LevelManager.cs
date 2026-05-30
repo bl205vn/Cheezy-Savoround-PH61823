@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
+    public static LevelData CurrentLevelData { get; private set; }
+
     [SerializeField] private GridManager _gridManager;
     [SerializeField] private TrayManager _trayManager;
     
@@ -39,6 +41,8 @@ public class LevelManager : MonoBehaviour
         LevelData data = JsonUtility.FromJson<LevelData>(jsonFile.text);
         if (data == null) return;
         
+        CurrentLevelData = data; // Cache data cho các class khác sử dụng (Data-Driven)
+
         if (_gridManager != null)
         {
             _gridManager.GenerateGrid(data.levelId, data.gridWidth, data.gridHeight);

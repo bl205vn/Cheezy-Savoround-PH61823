@@ -582,7 +582,7 @@ MonoBehaviour:
   _gridManager: {fileID: 1551731797}
   _trayManager: {fileID: 1577724468}
   _testLevelJson: {fileID: 4900000, guid: 46a729b6a3efc5846a72e0214c6e301f, type: 3}
-  _showDebugGizmos: 0
+  _showDebugGizmos: 1
 --- !u!4 &944683275
 Transform:
   m_ObjectHideFlags: 0
@@ -1050,7 +1050,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _slotSpacing: 1
-  _pizzaPlatePrefab: {fileID: 5347000887758237212, guid: 247cba8ec13334e47b171d83e919cba9, type: 3}
+  _pizzaPlatePrefab: {fileID: 9213117114252879284, guid: 525788b23425e3a45b463e3c339e1ddb, type: 3}
 --- !u!1001 &1768856432
 PrefabInstance:
   m_ObjectHideFlags: 0

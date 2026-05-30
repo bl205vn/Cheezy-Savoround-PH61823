@@ -2,5 +2,7 @@
     "levelId": 9,
     "gridWidth": 3,
     "gridHeight": 3,
-    "holdSlotCount": 3
+    "holdSlotCount": 3,
+    "maxSlices": 6,
+    "availablePizzaTypes": []
 }

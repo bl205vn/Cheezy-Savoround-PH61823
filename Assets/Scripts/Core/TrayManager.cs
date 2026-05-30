@@ -34,17 +34,42 @@ public class TrayManager : MonoBehaviour
 
             // Sinh đĩa pizza vào tâm anchor
             GameObject plateObj = Instantiate(_pizzaPlatePrefab, worldPos, Quaternion.identity, anchor.transform);
+            
+            // Ép scale đĩa pizza theo kích thước slot
+            FitPlateToSlot(plateObj);
+
             PizzaPlate plate = plateObj.GetComponent<PizzaPlate>();
             if (plate == null)
             {
                 plate = plateObj.AddComponent<PizzaPlate>();
             }
             plate.Initialize(anchor.transform);
+            plate.GenerateRandomSlices(); // Sinh bánh trực tiếp lên đĩa vừa tạo
 
             _slotAnchors.Add(anchor);
         }
         
         Debug.Log($"[TrayManager] Đã sinh {slotCount} đĩa pizza trên khay.");
+    }
+
+    /// <summary>
+    /// Ép scale prefab vào đúng kích thước 1 slot dựa trên Renderer bounds.
+    /// </summary>
+    private void FitPlateToSlot(GameObject plateObj)
+    {
+        Renderer rend = plateObj.GetComponentInChildren<Renderer>();
+        if (rend == null) return;
+
+        Vector3 currentSize = rend.bounds.size;
+        
+        // Chỉ scale theo trục X và Z (mặt phẳng ngang), giữ nguyên tỷ lệ Y
+        float scaleX = (currentSize.x > 0.001f) ? (_slotSpacing / currentSize.x) : 1f;
+        float scaleZ = (currentSize.z > 0.001f) ? (_slotSpacing / currentSize.z) : 1f;
+        
+        // Dùng scale nhỏ nhất để giữ tỷ lệ, khít hoàn toàn
+        float uniformScale = Mathf.Min(scaleX, scaleZ);
+        
+        plateObj.transform.localScale = plateObj.transform.localScale * uniformScale;
     }
 
     private void ClearTray()
