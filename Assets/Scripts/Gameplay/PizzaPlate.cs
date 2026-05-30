@@ -10,11 +10,13 @@ public enum PizzaType
 
 public class PizzaPlate : MonoBehaviour
 {
-    [Tooltip("Dùng tạm để test thuật toán tuần 1")]
+    [Tooltip("Dùng tạm để test thuật toán tuần 1 (Sắp tới sẽ bỏ vì đĩa trộn nhiều loại)")]
     [SerializeField] private PizzaType _type = PizzaType.Pho_mai;
     public PizzaType Type => _type;
     [SerializeField] private float _spawnHeight = 0f;
     [SerializeField] private float _pickUpOffset = 0.5f;
+    [Tooltip("Nâng miếng bánh lên trên mặt đĩa (chỉnh thành 1 nếu cần)")]
+    [SerializeField] private float _sliceYOffset = 1f;
 
     private Vector3 _originalPosition;
     private Transform _originalParent;
@@ -106,11 +108,12 @@ public class PizzaPlate : MonoBehaviour
 
             // Kéo trực tiếp Component visual từ Pool (Zero GC)
             PizzaSliceVisual slice = ObjectPoolManager.Instance.GetPizzaSlice();
-            slice.transform.SetParent(this.transform);
-            slice.transform.localPosition = Vector3.zero;
             
-            // Toán học thay thế GameObject neo: Quay góc dứt khoát
+            // Fix Scale: Dùng false để slice thừa kế chính xác scale của đĩa, không bị Unity phóng to bù trừ
+            slice.transform.SetParent(this.transform, false);
+            slice.transform.localPosition = new Vector3(0, _sliceYOffset, 0); // Nâng cao miếng bánh
             slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
+            slice.transform.localScale = Vector3.one; // Ép lại scale chuẩn
             
             slice.SetVisual(selectedType);
 
