@@ -150,8 +150,26 @@ public class GridManager : MonoBehaviour
             GridCell neighbor = GetCell(centerPos + dir);
             if (neighbor != null && neighbor.IsOccupied)
             {
-                // Kiểm tra cùng loại đĩa (Mock cho Tuần 1 vì chưa có miếng pizza)
-                if (neighbor.CurrentPlate.Type == centerPlate.Type)
+                // Kiểm tra xem 2 đĩa có bất kỳ loại bánh nào chung không (nền tảng cho logic Merge)
+                bool hasCommonType = false;
+                if (centerPlate.Slices != null && neighbor.CurrentPlate.Slices != null)
+                {
+                    foreach (var cSlice in centerPlate.Slices)
+                    {
+                        if (cSlice == null) continue;
+                        foreach (var nSlice in neighbor.CurrentPlate.Slices)
+                        {
+                            if (nSlice != null && cSlice.TypeIndex == nSlice.TypeIndex)
+                            {
+                                hasCommonType = true;
+                                break;
+                            }
+                        }
+                        if (hasCommonType) break;
+                    }
+                }
+
+                if (hasCommonType)
                 {
                     _matchingCells.Add(neighbor);
                 }
@@ -161,7 +179,7 @@ public class GridManager : MonoBehaviour
         // Log kết quả
         if (_matchingCells.Count > 0)
         {
-            string log = $"[Thuật toán quét] Đĩa {centerPlate.Type} tại ô {centerPos} trùng khớp với các ô:";
+            string log = $"[Thuật toán quét] Đĩa tại ô {centerPos} có miếng bánh CÙNG LOẠI với các ô:";
             foreach (var match in _matchingCells)
             {
                 log += $" {match.GridPosition}";
@@ -170,7 +188,7 @@ public class GridManager : MonoBehaviour
         }
         else
         {
-            Debug.Log($"[Thuật toán quét] Đĩa tại {centerPos} không có ô lân cận nào cùng loại.");
+            Debug.Log($"[Thuật toán quét] Đĩa tại {centerPos} KHÔNG có ô lân cận nào chứa miếng bánh cùng loại.");
         }
     }
 

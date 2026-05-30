@@ -1,18 +1,7 @@
 using UnityEngine;
 
-public enum PizzaType
-{
-    Pho_mai,
-    Xuc_xich,
-    Mi_tom,
-    Bun_dau_mam_tom
-}
-
 public class PizzaPlate : MonoBehaviour
 {
-    [Tooltip("Dùng tạm để test thuật toán tuần 1 (Sắp tới sẽ bỏ vì đĩa trộn nhiều loại)")]
-    [SerializeField] private PizzaType _type = PizzaType.Pho_mai;
-    public PizzaType Type => _type;
     [SerializeField] private float _spawnHeight = 0f;
     [SerializeField] private float _pickUpOffset = 0.5f;
     [Tooltip("Nâng miếng bánh lên trên mặt đĩa (chỉnh thành 1 nếu cần)")]
