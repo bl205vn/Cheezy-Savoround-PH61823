@@ -4,5 +4,6 @@
     "gridHeight": 3,
     "holdSlotCount": 3,
     "maxSlices": 6,
-    "availablePizzaTypes": []
+    "availablePizzaTypes": [],
+    "sliceCountProbabilities": []
 }

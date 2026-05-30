@@ -22,6 +22,8 @@ public class PizzaPlate : MonoBehaviour
     private Transform _originalParent;
     private PizzaSliceVisual[] _slices; // Mảng chứa các miếng theo index/góc quay
 
+    public PizzaSliceVisual[] Slices => _slices; // Cho phép các Manager đọc dữ liệu miếng bánh trên đĩa
+
     public void Initialize(Transform parentSlot)
     {
         _originalParent = parentSlot;
@@ -96,8 +98,40 @@ public class PizzaPlate : MonoBehaviour
             _slices = new PizzaSliceVisual[maxSlices];
         }
 
-        // Sinh ngẫu nhiên số lượng miếng trên đĩa này
-        int sliceCount = Random.Range(1, maxSlices + 1); 
+        // Sinh ngẫu nhiên số lượng miếng dựa theo tỉ lệ phần trăm cấu hình trong JSON (Roulette Wheel)
+        int sliceCount = 1;
+        float[] probabilities = LevelManager.CurrentLevelData.sliceCountProbabilities;
+
+        if (probabilities != null && probabilities.Length >= maxSlices)
+        {
+            float totalProb = 0f;
+            for (int i = 0; i < maxSlices; i++) totalProb += probabilities[i];
+
+            if (totalProb > 0f)
+            {
+                float randomPoint = Random.value * totalProb;
+                float currentSum = 0f;
+                
+                for (int i = 0; i < maxSlices; i++)
+                {
+                    currentSum += probabilities[i];
+                    if (randomPoint <= currentSum)
+                    {
+                        sliceCount = i + 1; // i = 0 tương đương 1 miếng
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                sliceCount = Random.Range(1, maxSlices + 1); // Fallback nếu mảng toàn 0
+            }
+        }
+        else
+        {
+            sliceCount = Random.Range(1, maxSlices + 1); // Fallback nếu JSON bị thiếu
+        }
+
         float angleStep = 360f / maxSlices;
 
         for (int i = 0; i < sliceCount; i++)
