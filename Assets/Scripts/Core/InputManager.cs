@@ -39,6 +39,13 @@ public class InputManager : MonoBehaviour
 
     private void HandleInput()
     {
+        // FSM Lock: Chỉ cho phép tương tác khi đang ở trạng thái PlayingState
+        if (GameStateManager.Instance != null && 
+            GameStateManager.Instance.CurrentState != GameStateManager.Instance.Playing)
+        {
+            return;
+        }
+
         if (Input.GetMouseButtonDown(0))
         {
             TryPickUpPlate();

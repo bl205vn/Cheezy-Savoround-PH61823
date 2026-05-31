@@ -12,6 +12,7 @@ public class PizzaPlate : MonoBehaviour
     private PizzaSliceVisual[] _slices; // Mảng chứa các miếng theo index/góc quay
 
     public PizzaSliceVisual[] Slices => _slices; // Cho phép các Manager đọc dữ liệu miếng bánh trên đĩa
+    public float SliceYOffset => _sliceYOffset;
 
     public void Initialize(Transform parentSlot)
     {
@@ -66,6 +67,97 @@ public class PizzaPlate : MonoBehaviour
                 _slices[i] = null;
             }
         }
+    }
+
+    public System.Collections.Generic.List<int> GetAvailableTypes()
+    {
+        System.Collections.Generic.List<int> types = new System.Collections.Generic.List<int>();
+        if (_slices == null) return types;
+        foreach (var slice in _slices)
+        {
+            if (slice != null && !types.Contains(slice.TypeIndex))
+            {
+                types.Add(slice.TypeIndex);
+            }
+        }
+        return types;
+    }
+
+    public bool HasType(int typeIndex)
+    {
+        if (_slices == null) return false;
+        foreach (var slice in _slices)
+        {
+            if (slice != null && slice.TypeIndex == typeIndex) return true;
+        }
+        return false;
+    }
+
+    public int GetTotalSlices()
+    {
+        if (_slices == null) return 0;
+        int count = 0;
+        foreach (var slice in _slices)
+        {
+            if (slice != null) count++;
+        }
+        return count;
+    }
+
+    public bool IsFull()
+    {
+        return GetTotalSlices() >= (_slices != null ? _slices.Length : 6);
+    }
+
+    public bool IsFullAndPure()
+    {
+        if (!IsFull()) return false;
+        int firstType = -1;
+        foreach (var slice in _slices)
+        {
+            if (slice == null) continue;
+            if (firstType == -1) firstType = slice.TypeIndex;
+            else if (slice.TypeIndex != firstType) return false;
+        }
+        return true;
+    }
+
+    public bool TryAddSlice(PizzaSliceVisual slice, out int addedIndex)
+    {
+        addedIndex = -1;
+        if (IsFull()) return false;
+        
+        for (int i = 0; i < _slices.Length; i++)
+        {
+            if (_slices[i] == null)
+            {
+                _slices[i] = slice;
+                addedIndex = i;
+                
+                // Chuẩn bị cho Animation bay
+                slice.transform.SetParent(this.transform, false);
+                float angleStep = 360f / _slices.Length;
+                slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
+                
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public PizzaSliceVisual RemoveSliceOfType(int typeIndex)
+    {
+        if (_slices == null) return null;
+        for (int i = _slices.Length - 1; i >= 0; i--)
+        {
+            if (_slices[i] != null && _slices[i].TypeIndex == typeIndex)
+            {
+                PizzaSliceVisual slice = _slices[i];
+                _slices[i] = null;
+                return slice;
+            }
+        }
+        return null;
     }
 
     public void GenerateRandomSlices()

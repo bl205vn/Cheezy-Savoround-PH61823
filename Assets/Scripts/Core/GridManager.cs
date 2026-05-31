@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class GridManager : MonoBehaviour
 {
+    public static GridManager Instance { get; private set; }
+
     [SerializeField] private GameObject _cellPrefab;
     [SerializeField] private float _cellSpacing = 1.0f; // Khoảng cách giữa các ô
     
@@ -12,6 +14,17 @@ public class GridManager : MonoBehaviour
 
     // Dictionary lưu trạng thái các ô
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
+    private Queue<GridCell> _cellsToProcess = new Queue<GridCell>();
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
 
     // Cache cho thuật toán quét để tránh cấp phát rác (Zero GC)
     private static readonly Vector2Int[] _directions = new Vector2Int[]
@@ -134,61 +147,107 @@ public class GridManager : MonoBehaviour
 
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell)
     {
-        CheckAdjacentCells(cell.GridPosition);
+        _cellsToProcess.Enqueue(cell);
+        GameStateManager.Instance.ChangeState(GameStateManager.Instance.CheckingCombo);
     }
 
-    private void CheckAdjacentCells(Vector2Int centerPos)
+    public bool ProcessNextMerge()
     {
-        GridCell centerCell = GetCell(centerPos);
-        if (centerCell == null || !centerCell.IsOccupied) return;
+        if (_cellsToProcess.Count == 0) return false;
+
+        GridCell centerCell = _cellsToProcess.Dequeue();
+        if (centerCell == null || !centerCell.IsOccupied) return ProcessNextMerge();
 
         PizzaPlate centerPlate = centerCell.CurrentPlate;
-        _matchingCells.Clear();
+        if (centerPlate.IsFull())
+        {
+            if (centerPlate.IsFullAndPure())
+            {
+                ExplodePlate(centerCell);
+                return ProcessNextMerge();
+            }
+            return ProcessNextMerge();
+        }
+
+        bool hasStartedAnyTween = false;
+        List<int> centerTypes = centerPlate.GetAvailableTypes();
+        
+        foreach (int type in centerTypes)
+        {
+            if (centerPlate.IsFull()) break;
+
+            foreach (var dir in _directions)
+            {
+                if (centerPlate.IsFull()) break;
+
+                GridCell neighbor = GetCell(centerCell.GridPosition + dir);
+                if (neighbor != null && neighbor.IsOccupied)
+                {
+                    PizzaPlate nPlate = neighbor.CurrentPlate;
+                    while (nPlate.HasType(type) && !centerPlate.IsFull())
+                    {
+                        PizzaSliceVisual slice = nPlate.RemoveSliceOfType(type);
+                        if (slice != null)
+                        {
+                            if (centerPlate.TryAddSlice(slice, out int addedIndex))
+                            {
+                                Vector3 targetWorldPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
+                                BezierTween.Instance.StartTween(slice.transform, targetWorldPos, onComplete: (t) => {
+                                    slice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
+                                });
+                                hasStartedAnyTween = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         foreach (var dir in _directions)
         {
-            GridCell neighbor = GetCell(centerPos + dir);
+            GridCell neighbor = GetCell(centerCell.GridPosition + dir);
             if (neighbor != null && neighbor.IsOccupied)
             {
-                // Kiểm tra xem 2 đĩa có bất kỳ loại bánh nào chung không (nền tảng cho logic Merge)
-                bool hasCommonType = false;
-                if (centerPlate.Slices != null && neighbor.CurrentPlate.Slices != null)
+                if (neighbor.CurrentPlate.GetTotalSlices() == 0)
                 {
-                    foreach (var cSlice in centerPlate.Slices)
-                    {
-                        if (cSlice == null) continue;
-                        foreach (var nSlice in neighbor.CurrentPlate.Slices)
-                        {
-                            if (nSlice != null && cSlice.TypeIndex == nSlice.TypeIndex)
-                            {
-                                hasCommonType = true;
-                                break;
-                            }
-                        }
-                        if (hasCommonType) break;
-                    }
-                }
-
-                if (hasCommonType)
-                {
-                    _matchingCells.Add(neighbor);
+                    Destroy(neighbor.CurrentPlate.gameObject);
+                    neighbor.ClearPlate();
                 }
             }
         }
 
-        // Log kết quả
-        if (_matchingCells.Count > 0)
+        if (hasStartedAnyTween)
         {
-            string log = $"[Thuật toán quét] Đĩa tại ô {centerPos} có miếng bánh CÙNG LOẠI với các ô:";
-            foreach (var match in _matchingCells)
-            {
-                log += $" {match.GridPosition}";
-            }
-            Debug.Log(log);
+            // Đưa lại vào hàng đợi để check tiếp sau khi tween bay xong
+            _cellsToProcess.Enqueue(centerCell);
+            return true;
         }
         else
         {
-            Debug.Log($"[Thuật toán quét] Đĩa tại {centerPos} KHÔNG có ô lân cận nào chứa miếng bánh cùng loại.");
+            if (centerPlate.IsFullAndPure())
+            {
+                ExplodePlate(centerCell);
+            }
+            return ProcessNextMerge();
+        }
+    }
+
+    private void ExplodePlate(GridCell cell)
+    {
+        Debug.Log($"[Merge] NỔ ĐĨA tại {cell.GridPosition}! Giải phóng ô.");
+        PizzaPlate plate = cell.CurrentPlate;
+        plate.ClearSlices(); // Trả pool miếng bánh
+        Destroy(plate.gameObject);
+        cell.ClearPlate();
+        
+        // Combo Cascade: Re-check các đĩa xung quanh
+        foreach(var dir in _directions)
+        {
+            GridCell neighbor = GetCell(cell.GridPosition + dir);
+            if (neighbor != null && neighbor.IsOccupied)
+            {
+                _cellsToProcess.Enqueue(neighbor);
+            }
         }
     }
 

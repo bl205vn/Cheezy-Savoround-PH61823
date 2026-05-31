@@ -24,4 +24,10 @@ public class GridCell : MonoBehaviour
         Vector3 snapPosition = new Vector3(transform.position.x, transform.position.y + _snapOffsetY, transform.position.z);
         plate.PlaceAt(snapPosition, transform);
     }
+
+    public void ClearPlate()
+    {
+        IsOccupied = false;
+        CurrentPlate = null;
+    }
 }
