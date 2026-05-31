@@ -169,40 +169,50 @@ public class GridManager : MonoBehaviour
             return ProcessNextMerge();
         }
 
-        bool hasStartedAnyTween = false;
+        // --- BƯỚC 1: Thu thập tất cả transfer cần làm ---
+        // Mỗi hướng chỉ 1 miếng (giống Bloom Sort)
+        var pendingTransfers = new List<(int typeIndex, PizzaPlate source)>();
         List<int> centerTypes = centerPlate.GetAvailableTypes();
         
-        foreach (int type in centerTypes)
+        foreach (var dir in _directions)
         {
-            if (centerPlate.IsFull()) break;
+            GridCell neighbor = GetCell(centerCell.GridPosition + dir);
+            if (neighbor == null || !neighbor.IsOccupied) continue;
 
-            foreach (var dir in _directions)
+            PizzaPlate neighborPlate = neighbor.CurrentPlate;
+
+            // Tìm 1 loại pizza trong đĩa giữa mà đĩa lân cận cũng có
+            foreach (int type in centerTypes)
             {
-                if (centerPlate.IsFull()) break;
-
-                GridCell neighbor = GetCell(centerCell.GridPosition + dir);
-                if (neighbor != null && neighbor.IsOccupied)
+                if (neighborPlate.HasType(type))
                 {
-                    PizzaPlate nPlate = neighbor.CurrentPlate;
-                    while (nPlate.HasType(type) && !centerPlate.IsFull())
-                    {
-                        PizzaSliceVisual slice = nPlate.RemoveSliceOfType(type);
-                        if (slice != null)
-                        {
-                            if (centerPlate.TryAddSlice(slice, out int addedIndex))
-                            {
-                                Vector3 targetWorldPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
-                                BezierTween.Instance.StartTween(slice.transform, targetWorldPos, onComplete: (t) => {
-                                    slice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
-                                });
-                                hasStartedAnyTween = true;
-                            }
-                        }
-                    }
+                    pendingTransfers.Add((type, neighborPlate));
+                    break; // 1 hướng chỉ cho 1 miếng di chuyển mỗi lượt
                 }
             }
         }
 
+        // --- BƯỚC 2: Thực thi tất cả transfer cùng lúc ---
+        bool anyTransfer = false;
+        foreach (var transfer in pendingTransfers)
+        {
+            if (centerPlate.IsFull()) break; // Đĩa giữa đã đầy thì ngưng
+
+            PizzaSliceVisual slice = transfer.source.RemoveSliceOfType(transfer.typeIndex);
+            if (slice != null)
+            {
+                if (centerPlate.TryAddSlice(slice, out int addedIndex))
+                {
+                    Vector3 targetWorldPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
+                    BezierTween.Instance.StartTween(slice.transform, targetWorldPos, onComplete: (t) => {
+                        slice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
+                    });
+                    anyTransfer = true;
+                }
+            }
+        }
+
+        // Dọn dẹp các đĩa bị hút sạch bánh
         foreach (var dir in _directions)
         {
             GridCell neighbor = GetCell(centerCell.GridPosition + dir);
@@ -216,9 +226,10 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        if (hasStartedAnyTween)
+        // --- BƯỚC 3: Xử lý Cascade / Kiểm tra nổ đĩa ---
+        if (anyTransfer)
         {
-            // Đưa lại vào hàng đợi để check tiếp sau khi tween bay xong
+            // Bỏ lại vào hàng đợi để check tiếp sau khi tween bay xong
             _cellsToProcess.Enqueue(centerCell);
             return true;
         }

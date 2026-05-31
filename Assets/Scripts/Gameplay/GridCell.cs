@@ -20,8 +20,12 @@ public class GridCell : MonoBehaviour
         IsOccupied = true;
         CurrentPlate = plate;
         
-        // Đặt vị trí của đĩa vào đúng tâm ô lưới (cùng toạ độ x, z và nhô lên trục y một chút)
         Vector3 snapPosition = new Vector3(transform.position.x, transform.position.y + _snapOffsetY, transform.position.z);
+        
+        // Gọi Coroutine nhảy vào ô
+        plate.StartCoroutine(plate.AnimateToCell(plate.transform.position, snapPosition));
+        
+        // Cập nhật data
         plate.PlaceAt(snapPosition, transform);
     }
 

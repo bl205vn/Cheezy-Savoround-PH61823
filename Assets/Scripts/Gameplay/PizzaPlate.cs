@@ -43,11 +43,32 @@ public class PizzaPlate : MonoBehaviour
 
     public void PlaceAt(Vector3 targetPos, Transform newParent)
     {
-        // Đặt đĩa vào ô lưới
-        transform.position = targetPos;
-        transform.SetParent(newParent);
+        // Đặt parent nhưng KHÔNG di chuyển tức thì (để Coroutine lo)
+        transform.SetParent(newParent, true);
         _originalParent = newParent;
         _originalPosition = targetPos;
+    }
+
+    public System.Collections.IEnumerator AnimateToCell(Vector3 startPos, Vector3 endPos, float duration = 0.25f)
+    {
+        Vector3 midPoint = (startPos + endPos) * 0.5f;
+        Vector3 controlPoint = midPoint + Vector3.up * 0.8f;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            float t = elapsed / duration;
+            float u = 1f - t;
+            Vector3 pos = u * u * startPos
+                        + 2f * u * t * controlPoint
+                        + t * t * endPos;
+            
+            transform.position = pos;
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        
+        transform.position = endPos;
     }
 
     private void OnDestroy()
@@ -135,7 +156,9 @@ public class PizzaPlate : MonoBehaviour
                 addedIndex = i;
                 
                 // Chuẩn bị cho Animation bay
-                slice.transform.SetParent(this.transform, false);
+                // Bắt buộc dùng true để giữ nguyên World Position, tránh lỗi teleport!
+                slice.transform.SetParent(this.transform, true);
+                
                 float angleStep = 360f / _slices.Length;
                 slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
                 
