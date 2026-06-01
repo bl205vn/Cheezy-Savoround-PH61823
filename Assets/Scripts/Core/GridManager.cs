@@ -14,14 +14,14 @@ public class GridManager : MonoBehaviour
 
     // Dictionary lưu trạng thái các ô
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
-    private Queue<GridCell> _cellsToProcess = new Queue<GridCell>();
+    private List<GridCell> _cellsToProcess = new List<GridCell>();
     private HashSet<GridCell> _cellsInQueue = new HashSet<GridCell>();
 
     private void EnqueueCell(GridCell cell)
     {
         if (cell == null || !cell.IsOccupied) return;
         if (_cellsInQueue.Contains(cell)) return;
-        _cellsToProcess.Enqueue(cell);
+        _cellsToProcess.Add(cell);
         _cellsInQueue.Add(cell);
     }
 
@@ -154,8 +154,51 @@ public class GridManager : MonoBehaviour
         return null;
     }
 
+    private void CalculatePriorities(GridCell startCell)
+    {
+        // Khởi tạo ưu tiên 0 cho toàn lưới
+        foreach (var kvp in _gridCells)
+        {
+            if (kvp.Value.IsOccupied)
+            {
+                kvp.Value.CurrentPlate.Priority = 0;
+            }
+        }
+
+        if (startCell == null || !startCell.IsOccupied) return;
+
+        Queue<GridCell> bfsQueue = new Queue<GridCell>();
+        HashSet<GridCell> visited = new HashSet<GridCell>();
+
+        bfsQueue.Enqueue(startCell);
+        visited.Add(startCell);
+        startCell.CurrentPlate.Priority = 9; // Tâm chấn
+
+        while (bfsQueue.Count > 0)
+        {
+            GridCell current = bfsQueue.Dequeue();
+            int currentPrio = current.CurrentPlate.Priority;
+
+            foreach (var dir in _directions)
+            {
+                GridCell neighbor = GetCell(current.GridPosition + dir);
+                if (neighbor != null && neighbor.IsOccupied && !visited.Contains(neighbor))
+                {
+                    visited.Add(neighbor);
+                    int nextPrio = Mathf.Max(0, currentPrio - 1);
+                    neighbor.CurrentPlate.Priority = nextPrio;
+                    if (nextPrio > 0)
+                    {
+                        bfsQueue.Enqueue(neighbor);
+                    }
+                }
+            }
+        }
+    }
+
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell)
     {
+        CalculatePriorities(cell); // Gán trọng số Dijkstra từ tâm chấn
         EnqueueCell(cell);
         
         // Đưa các hàng xóm vào hàng đợi. Đảm bảo luật "Kẻ mạnh hút kẻ yếu" được thực thi 2 chiều
@@ -175,7 +218,15 @@ public class GridManager : MonoBehaviour
     {
         if (_cellsToProcess.Count == 0) return false;
 
-        GridCell centerCell = _cellsToProcess.Dequeue();
+        // Sắp xếp giảm dần theo Ưu tiên (Priority 9 xét trước)
+        _cellsToProcess.Sort((a, b) => {
+            int prioA = a.IsOccupied ? a.CurrentPlate.Priority : -1;
+            int prioB = b.IsOccupied ? b.CurrentPlate.Priority : -1;
+            return prioB.CompareTo(prioA);
+        });
+
+        GridCell centerCell = _cellsToProcess[0];
+        _cellsToProcess.RemoveAt(0);
         _cellsInQueue.Remove(centerCell);
         
         if (centerCell == null || !centerCell.IsOccupied) return ProcessNextMerge();
@@ -194,7 +245,7 @@ public class GridManager : MonoBehaviour
             if (swapped)
             {
                 // Bỏ lại vào hàng đợi để check tiếp sau khi tween bay xong
-                _cellsToProcess.Enqueue(centerCell);
+                EnqueueCell(centerCell);
                 return true;
             }
             
@@ -218,11 +269,16 @@ public class GridManager : MonoBehaviour
             {
                 if (neighborPlate.HasType(type))
                 {
-                    // LUẬT "BLOOM SORT CHỐNG KẸT":
-                    // Chỉ cho phép Đĩa đang xét hút nếu số lượng bánh loại đó của nó >= số lượng của hàng xóm.
-                    // Nếu ít hơn, đĩa hàng xóm sẽ là người hút (vì hàng xóm cũng nằm trong _cellsToProcess).
-                    // Điều này ngăn chặn hoàn toàn vòng lặp hút vô tận qua lại.
-                    if (centerPlate.GetCountOf(type) >= neighborPlate.GetCountOf(type))
+                    // LUẬT "BLOOM SORT CHỐNG KẸT" KẾT HỢP ƯU TIÊN:
+                    // Đĩa có Ưu tiên cao hơn luôn được quyền hút từ đĩa thấp hơn (hướng về tâm chấn).
+                    // Nếu ưu tiên thấp hơn, chỉ được hút nếu số lượng lớn hơn HẲN.
+                    // Nếu bằng nhau, số lượng lớn hơn hoặc bằng sẽ được hút.
+                    bool canPull = false;
+                    if (centerPlate.Priority > neighborPlate.Priority) canPull = true;
+                    else if (centerPlate.Priority < neighborPlate.Priority) canPull = centerPlate.GetCountOf(type) > neighborPlate.GetCountOf(type);
+                    else canPull = centerPlate.GetCountOf(type) >= neighborPlate.GetCountOf(type);
+
+                    if (canPull)
                     {
                         pendingTransfers.Add((type, neighborPlate));
                         break; // 1 hướng chỉ cho 1 miếng di chuyển mỗi lượt
@@ -259,6 +315,11 @@ public class GridManager : MonoBehaviour
             {
                 if (neighbor.CurrentPlate.GetTotalSlices() == 0)
                 {
+                    // ĐẶC QUYỀN TRẠM TRUNG CHUYỂN: CHỈ Ưu tiên 9 không bị xóa ngay
+                    if (neighbor.CurrentPlate.Priority == 9)
+                    {
+                        continue; 
+                    }
                     ObjectPoolManager.Instance.ReturnPizzaPlate(neighbor.CurrentPlate);
                     neighbor.ClearPlate();
                 }
@@ -276,7 +337,11 @@ public class GridManager : MonoBehaviour
         {
             if (centerPlate.IsFullAndPure())
             {
-                ExplodePlate(centerCell);
+                // ĐẶC QUYỀN TRẠM TRUNG CHUYỂN: CHỈ Ưu tiên 9 không nổ ngay
+                if (centerPlate.Priority != 9)
+                {
+                    ExplodePlate(centerCell);
+                }
             }
             return ProcessNextMerge();
         }
@@ -293,14 +358,43 @@ public class GridManager : MonoBehaviour
 
             PizzaPlate neighborPlate = neighbor.CurrentPlate;
 
+            // TRẠM TRUNG CHUYỂN: Nếu đĩa lân cận TRỐNG (0 miếng)
+            if (neighborPlate.GetTotalSlices() == 0)
+            {
+                // CHỈ cho phép đẩy vào đĩa trống nếu đĩa trống đó là Ưu tiên 9 (Tâm chấn)
+                if (neighborPlate.Priority == 9)
+                {
+                    // Đẩy loại bánh ít nhất (thiểu số) sang đĩa trống
+                    int minorityType = centerPlate.GetMinorityType(-1);
+                    if (minorityType != -1)
+                    {
+                        PizzaSliceVisual pushSlice = centerPlate.RemoveSliceOfType(minorityType);
+                        if (pushSlice != null)
+                        {
+                            neighborPlate.TryAddSlice(pushSlice, out _);
+                            Vector3 targetPos = neighborPlate.transform.position + new Vector3(0, neighborPlate.SliceYOffset, 0);
+                            BezierTween.Instance.StartTween(pushSlice.transform, targetPos, onComplete: (t) => {
+                                pushSlice.transform.localPosition = new Vector3(0, neighborPlate.SliceYOffset, 0);
+                            });
+                            EnqueueCell(neighbor); // Hàng xóm nay đã có bánh, cần xét lại
+                            return true;
+                        }
+                    }
+                }
+            }
+
             // Tìm loại bánh mà Center muốn gom thêm (Neighbor phải có)
             foreach (int pullType in centerTypes)
             {
                 if (neighborPlate.HasType(pullType))
                 {
-                    // LUẬT 1: "Kẻ mạnh hút kẻ yếu" (Áp dụng cả khi Swap)
-                    // Không hút nếu Neighbor có nhiều miếng bánh loại này hơn mình
-                    if (centerPlate.GetCountOf(pullType) < neighborPlate.GetCountOf(pullType))
+                    // LUẬT 1: "Kẻ mạnh hút kẻ yếu" kết hợp Ưu Tiên
+                    bool canPullSwap = false;
+                    if (centerPlate.Priority > neighborPlate.Priority) canPullSwap = true;
+                    else if (centerPlate.Priority < neighborPlate.Priority) canPullSwap = centerPlate.GetCountOf(pullType) > neighborPlate.GetCountOf(pullType);
+                    else canPullSwap = centerPlate.GetCountOf(pullType) >= neighborPlate.GetCountOf(pullType);
+
+                    if (!canPullSwap)
                     {
                         continue; 
                     }
@@ -367,6 +461,39 @@ public class GridManager : MonoBehaviour
                 EnqueueCell(neighbor);
             }
         }
+    }
+
+    public bool CleanupPrivilegedPlates()
+    {
+        bool anyExploded = false;
+        foreach (var kvp in _gridCells)
+        {
+            GridCell cell = kvp.Value;
+            if (cell.IsOccupied)
+            {
+                PizzaPlate plate = cell.CurrentPlate;
+                
+                if (plate.Priority == 9)
+                {
+                    if (plate.GetTotalSlices() == 0)
+                    {
+                        ObjectPoolManager.Instance.ReturnPizzaPlate(plate);
+                        cell.ClearPlate();
+                    }
+                    else if (plate.IsFullAndPure())
+                    {
+                        ExplodePlate(cell);
+                        anyExploded = true;
+                    }
+                }
+                
+                if (cell.IsOccupied)
+                {
+                    cell.CurrentPlate.Priority = 0;
+                }
+            }
+        }
+        return anyExploded;
     }
 
 #if UNITY_EDITOR

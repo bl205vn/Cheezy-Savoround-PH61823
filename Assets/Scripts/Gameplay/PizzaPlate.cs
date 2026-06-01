@@ -13,6 +13,7 @@ public class PizzaPlate : MonoBehaviour
 
     public PizzaSliceVisual[] Slices => _slices; // Cho phép các Manager đọc dữ liệu miếng bánh trên đĩa
     public float SliceYOffset => _sliceYOffset;
+    public int Priority { get; set; } = 0; // Ưu tiên 9 -> 0 cho logic Trạm trung chuyển
 
     // --- ZERO GC BUFFERS ---
     private readonly System.Collections.Generic.Dictionary<int, int> _typeCountBuffer = new System.Collections.Generic.Dictionary<int, int>();

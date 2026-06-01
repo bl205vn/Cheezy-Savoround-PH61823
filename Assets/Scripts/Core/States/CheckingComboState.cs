@@ -12,7 +12,16 @@ public class CheckingComboState : IGameState
         }
         else
         {
-            GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
+            bool hasExploded = GridManager.Instance.CleanupPrivilegedPlates();
+            if (hasExploded)
+            {
+                // Explosion resets neighboring priorities to 0 and might trigger combo logic in next frame
+                GameStateManager.Instance.ChangeState(GameStateManager.Instance.Animating);
+            }
+            else
+            {
+                GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
+            }
         }
     }
 
