@@ -166,6 +166,16 @@ public class GridManager : MonoBehaviour
                 ExplodePlate(centerCell);
                 return ProcessNextMerge();
             }
+            
+            // --- NEW LOGIC: SWAP SLICES WHEN FULL BUT NOT PURE ---
+            bool swapped = TrySwapMinoritySlice(centerCell, centerPlate);
+            if (swapped)
+            {
+                // Bỏ lại vào hàng đợi để check tiếp sau khi tween bay xong
+                _cellsToProcess.Enqueue(centerCell);
+                return true;
+            }
+            
             return ProcessNextMerge();
         }
 
@@ -241,6 +251,64 @@ public class GridManager : MonoBehaviour
             }
             return ProcessNextMerge();
         }
+    }
+
+    private bool TrySwapMinoritySlice(GridCell centerCell, PizzaPlate centerPlate)
+    {
+        int majorityType = centerPlate.GetMajorityType();
+        int minorityType = centerPlate.GetMinorityType(majorityType); // tìm loại ít nhất (ngoại trừ majority)
+
+        if (majorityType == -1 || minorityType == -1) return false;
+
+        foreach (var dir in _directions)
+        {
+            GridCell neighbor = GetCell(centerCell.GridPosition + dir);
+            if (neighbor == null || !neighbor.IsOccupied) continue;
+
+            PizzaPlate neighborPlate = neighbor.CurrentPlate;
+
+            if (neighborPlate.HasType(majorityType))
+            {
+                // Thử gỡ miếng từ cả 2 đĩa
+                PizzaSliceVisual pullSlice = neighborPlate.RemoveSliceOfType(majorityType);
+                if (pullSlice != null)
+                {
+                    PizzaSliceVisual pushSlice = centerPlate.RemoveSliceOfType(minorityType);
+                    if (pushSlice != null)
+                    {
+                        // Trao đổi
+                        centerPlate.TryAddSlice(pullSlice, out _);
+                        neighborPlate.TryAddSlice(pushSlice, out _);
+
+                        // Tween cho miếng hút vào (từ Neighbor -> Center)
+                        Vector3 targetCenterPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
+                        BezierTween.Instance.StartTween(pullSlice.transform, targetCenterPos, onComplete: (t) => {
+                            pullSlice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
+                        });
+
+                        // Tween cho miếng đẩy ra (từ Center -> Neighbor)
+                        Vector3 targetNeighborPos = neighborPlate.transform.position + new Vector3(0, neighborPlate.SliceYOffset, 0);
+                        BezierTween.Instance.StartTween(pushSlice.transform, targetNeighborPos, onComplete: (t) => {
+                            pushSlice.transform.localPosition = new Vector3(0, neighborPlate.SliceYOffset, 0);
+                        });
+
+                        // Neighbor nhận miếng mới có thể đầy, cần được check
+                        if (!_cellsToProcess.Contains(neighbor))
+                        {
+                            _cellsToProcess.Enqueue(neighbor);
+                        }
+
+                        return true; // Chỉ tráo 1 cặp mỗi lượt
+                    }
+                    else
+                    {
+                        // Rollback
+                        neighborPlate.TryAddSlice(pullSlice, out _);
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void ExplodePlate(GridCell cell)

@@ -130,6 +130,56 @@ public class PizzaPlate : MonoBehaviour
         return GetTotalSlices() >= (_slices != null ? _slices.Length : 6);
     }
 
+    public int GetMajorityType()
+    {
+        if (_slices == null) return -1;
+        System.Collections.Generic.Dictionary<int, int> counts = new System.Collections.Generic.Dictionary<int, int>();
+        foreach (var slice in _slices)
+        {
+            if (slice != null)
+            {
+                if (!counts.ContainsKey(slice.TypeIndex)) counts[slice.TypeIndex] = 0;
+                counts[slice.TypeIndex]++;
+            }
+        }
+        int maxCount = 0;
+        int majorityType = -1;
+        foreach (var kvp in counts)
+        {
+            if (kvp.Value > maxCount)
+            {
+                maxCount = kvp.Value;
+                majorityType = kvp.Key;
+            }
+        }
+        return majorityType;
+    }
+
+    public int GetMinorityType(int excludeType = -1)
+    {
+        if (_slices == null) return -1;
+        System.Collections.Generic.Dictionary<int, int> counts = new System.Collections.Generic.Dictionary<int, int>();
+        foreach (var slice in _slices)
+        {
+            if (slice != null && slice.TypeIndex != excludeType)
+            {
+                if (!counts.ContainsKey(slice.TypeIndex)) counts[slice.TypeIndex] = 0;
+                counts[slice.TypeIndex]++;
+            }
+        }
+        int minCount = int.MaxValue;
+        int minorityType = -1;
+        foreach (var kvp in counts)
+        {
+            if (kvp.Value < minCount)
+            {
+                minCount = kvp.Value;
+                minorityType = kvp.Key;
+            }
+        }
+        return minorityType;
+    }
+
     public bool IsFullAndPure()
     {
         if (!IsFull()) return false;
