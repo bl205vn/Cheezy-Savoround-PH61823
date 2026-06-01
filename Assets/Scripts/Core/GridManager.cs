@@ -284,10 +284,7 @@ public class GridManager : MonoBehaviour
 
     private bool TrySwapMinoritySlice(GridCell centerCell, PizzaPlate centerPlate)
     {
-        int majorityType = centerPlate.GetMajorityType();
-        int minorityType = centerPlate.GetMinorityType(majorityType); // tìm loại ít nhất (ngoại trừ majority)
-
-        if (majorityType == -1 || minorityType == -1) return false;
+        List<int> centerTypes = centerPlate.GetAvailableTypes(); // Đã sort giảm dần theo số lượng
 
         foreach (var dir in _directions)
         {
@@ -296,40 +293,42 @@ public class GridManager : MonoBehaviour
 
             PizzaPlate neighborPlate = neighbor.CurrentPlate;
 
-            if (neighborPlate.HasType(majorityType))
+            // Tìm loại bánh mà Center muốn gom thêm (Neighbor phải có)
+            foreach (int pullType in centerTypes)
             {
-                // Thử gỡ miếng từ cả 2 đĩa
-                PizzaSliceVisual pullSlice = neighborPlate.RemoveSliceOfType(majorityType);
-                if (pullSlice != null)
+                if (neighborPlate.HasType(pullType))
                 {
-                    PizzaSliceVisual pushSlice = centerPlate.RemoveSliceOfType(minorityType);
-                    if (pushSlice != null)
+                    // Tìm loại bánh ít nhất trên Center để đẩy sang Neighbor
+                    int pushType = centerPlate.GetMinorityType(pullType);
+                    if (pushType != -1)
                     {
-                        // Trao đổi
-                        centerPlate.TryAddSlice(pullSlice, out _);
-                        neighborPlate.TryAddSlice(pushSlice, out _);
+                        PizzaSliceVisual pullSlice = neighborPlate.RemoveSliceOfType(pullType);
+                        if (pullSlice != null)
+                        {
+                            PizzaSliceVisual pushSlice = centerPlate.RemoveSliceOfType(pushType);
+                            if (pushSlice != null)
+                            {
+                                centerPlate.TryAddSlice(pullSlice, out _);
+                                neighborPlate.TryAddSlice(pushSlice, out _);
 
-                        // Tween cho miếng hút vào (từ Neighbor -> Center)
-                        Vector3 targetCenterPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
-                        BezierTween.Instance.StartTween(pullSlice.transform, targetCenterPos, onComplete: (t) => {
-                            pullSlice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
-                        });
+                                Vector3 targetCenterPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
+                                BezierTween.Instance.StartTween(pullSlice.transform, targetCenterPos, onComplete: (t) => {
+                                    pullSlice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
+                                });
 
-                        // Tween cho miếng đẩy ra (từ Center -> Neighbor)
-                        Vector3 targetNeighborPos = neighborPlate.transform.position + new Vector3(0, neighborPlate.SliceYOffset, 0);
-                        BezierTween.Instance.StartTween(pushSlice.transform, targetNeighborPos, onComplete: (t) => {
-                            pushSlice.transform.localPosition = new Vector3(0, neighborPlate.SliceYOffset, 0);
-                        });
+                                Vector3 targetNeighborPos = neighborPlate.transform.position + new Vector3(0, neighborPlate.SliceYOffset, 0);
+                                BezierTween.Instance.StartTween(pushSlice.transform, targetNeighborPos, onComplete: (t) => {
+                                    pushSlice.transform.localPosition = new Vector3(0, neighborPlate.SliceYOffset, 0);
+                                });
 
-                        // Neighbor nhận miếng mới có thể đầy, cần được check
-                        EnqueueCell(neighbor);
-
-                        return true; // Chỉ tráo 1 cặp mỗi lượt
-                    }
-                    else
-                    {
-                        // Rollback
-                        neighborPlate.TryAddSlice(pullSlice, out _);
+                                EnqueueCell(neighbor);
+                                return true;
+                            }
+                            else
+                            {
+                                neighborPlate.TryAddSlice(pullSlice, out _);
+                            }
+                        }
                     }
                 }
             }
