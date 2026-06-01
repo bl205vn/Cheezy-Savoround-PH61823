@@ -7,12 +7,9 @@ public class ObjectPoolManager : MonoBehaviour
 
     [Header("Pizza Slice Pool")]
     [SerializeField] private PizzaSliceVisual _pizzaSlicePrefab;
-    [Tooltip("Size: 144 (Lưới 4x6 đầy) + 18 (Khay) + 38 (Animation dự phòng) = 200")]
-    [SerializeField] private int _initialSlicePoolSize = 200;
 
     [Header("Pizza Plate Pool")]
-    [SerializeField] private GameObject _pizzaPlatePrefab;
-    [SerializeField] private int _initialPlatePoolSize = 50;
+    [SerializeField] private PizzaPlate _pizzaPlatePrefab;
 
     private Queue<PizzaSliceVisual> _slicePool = new Queue<PizzaSliceVisual>();
     private Queue<PizzaPlate> _platePool = new Queue<PizzaPlate>();
@@ -22,7 +19,7 @@ public class ObjectPoolManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            InitializePool();
+            // Không InitializePool ở đây nữa, đợi LevelManager truyền data vào
         }
         else
         {
@@ -30,9 +27,15 @@ public class ObjectPoolManager : MonoBehaviour
         }
     }
 
-    private void InitializePool()
+    public void InitializePool(int gridWidth, int gridHeight, int holdSlotCount, int maxSlices)
     {
-        for (int i = 0; i < _initialSlicePoolSize; i++)
+        // Tính toán linh hoạt theo Data-Driven
+        int requiredPlates = (gridWidth * gridHeight) + holdSlotCount + 3; // +3 dự phòng
+        int requiredSlices = requiredPlates * maxSlices + 20; // +20 dự phòng cho animation
+
+        Debug.Log($"[ObjectPool] Khởi tạo động: {requiredPlates} đĩa, {requiredSlices} miếng.");
+
+        for (int i = 0; i < requiredSlices; i++)
         {
             PizzaSliceVisual slice = Instantiate(_pizzaSlicePrefab, transform);
             slice.gameObject.SetActive(false);
@@ -41,12 +44,9 @@ public class ObjectPoolManager : MonoBehaviour
 
         if (_pizzaPlatePrefab != null)
         {
-            for (int i = 0; i < _initialPlatePoolSize; i++)
+            for (int i = 0; i < requiredPlates; i++)
             {
-                GameObject plateObj = Instantiate(_pizzaPlatePrefab, transform);
-                PizzaPlate plate = plateObj.GetComponent<PizzaPlate>();
-                if (plate == null) plate = plateObj.AddComponent<PizzaPlate>();
-                
+                PizzaPlate plate = Instantiate(_pizzaPlatePrefab, transform);
                 plate.gameObject.SetActive(false);
                 _platePool.Enqueue(plate);
             }
@@ -92,10 +92,7 @@ public class ObjectPoolManager : MonoBehaviour
         }
 
         Debug.LogWarning("[ObjectPool] Plate Pool bị cạn! Đang tự động tăng thêm...");
-        GameObject newPlateObj = Instantiate(_pizzaPlatePrefab, transform);
-        PizzaPlate newPlate = newPlateObj.GetComponent<PizzaPlate>();
-        if (newPlate == null) newPlate = newPlateObj.AddComponent<PizzaPlate>();
-        
+        PizzaPlate newPlate = Instantiate(_pizzaPlatePrefab, transform);
         return newPlate;
     }
 

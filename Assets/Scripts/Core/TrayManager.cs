@@ -59,14 +59,20 @@ public class TrayManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Lắng nghe FSM chuyển trạng thái.
-    /// Khi về PlayingState + cờ refill = true → sinh batch đĩa mới.
-    /// Đảm bảo đĩa mới chỉ xuất hiện SAU KHI merge/bloom animation xong hẳn.
-    /// </summary>
     private void HandleStateChanged(IGameState newState)
     {
         if (newState is PlayingState && _pendingRefill)
+        {
+            RefillTray();
+        }
+    }
+
+    private void LateUpdate()
+    {
+        // Khắc phục lỗi thứ tự thực thi Event (Race Condition)
+        // Nếu GridManager chạy trước và đưa state về PlayingState ngay lập tức,
+        // TrayManager sẽ bị lỡ event OnStateChanged. LateUpdate sẽ bắt lại trường hợp này.
+        if (_pendingRefill && GameStateManager.Instance.CurrentState is PlayingState)
         {
             RefillTray();
         }

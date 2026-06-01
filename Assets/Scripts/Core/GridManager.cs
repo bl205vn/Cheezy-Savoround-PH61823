@@ -298,10 +298,24 @@ public class GridManager : MonoBehaviour
             {
                 if (neighborPlate.HasType(pullType))
                 {
+                    // LUẬT 1: "Kẻ mạnh hút kẻ yếu" (Áp dụng cả khi Swap)
+                    // Không hút nếu Neighbor có nhiều miếng bánh loại này hơn mình
+                    if (centerPlate.GetCountOf(pullType) < neighborPlate.GetCountOf(pullType))
+                    {
+                        continue; 
+                    }
+
                     // Tìm loại bánh ít nhất trên Center để đẩy sang Neighbor
                     int pushType = centerPlate.GetMinorityType(pullType);
                     if (pushType != -1)
                     {
+                        // LUẬT 2: KHÔNG BAO GIỜ phá vỡ đa số
+                        // Không đẩy đi loại bánh mà mình đang có nhiều hơn loại bánh hút vào
+                        // (VD: Không đẩy Orange x4 để lấy Green x2)
+                        if (centerPlate.GetCountOf(pushType) > centerPlate.GetCountOf(pullType))
+                        {
+                            continue;
+                        }
                         PizzaSliceVisual pullSlice = neighborPlate.RemoveSliceOfType(pullType);
                         if (pullSlice != null)
                         {

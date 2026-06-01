@@ -43,6 +43,12 @@ public class LevelManager : MonoBehaviour
         
         CurrentLevelData = data; // Cache data cho các class khác sử dụng (Data-Driven)
 
+        // Khởi tạo Pool động dựa trên LevelData
+        if (ObjectPoolManager.Instance != null)
+        {
+            ObjectPoolManager.Instance.InitializePool(data.gridWidth, data.gridHeight, data.holdSlotCount, data.maxSlices);
+        }
+
         if (_gridManager != null)
         {
             _gridManager.GenerateGrid(data.levelId, data.gridWidth, data.gridHeight);
