@@ -15,6 +15,15 @@ public class GridManager : MonoBehaviour
     // Dictionary lưu trạng thái các ô
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
     private Queue<GridCell> _cellsToProcess = new Queue<GridCell>();
+    private HashSet<GridCell> _cellsInQueue = new HashSet<GridCell>();
+
+    private void EnqueueCell(GridCell cell)
+    {
+        if (cell == null || !cell.IsOccupied) return;
+        if (_cellsInQueue.Contains(cell)) return;
+        _cellsToProcess.Enqueue(cell);
+        _cellsInQueue.Add(cell);
+    }
 
     private void Awake()
     {
@@ -147,7 +156,18 @@ public class GridManager : MonoBehaviour
 
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell)
     {
-        _cellsToProcess.Enqueue(cell);
+        EnqueueCell(cell);
+        
+        // Đưa các hàng xóm vào hàng đợi. Đảm bảo luật "Kẻ mạnh hút kẻ yếu" được thực thi 2 chiều
+        foreach (var dir in _directions)
+        {
+            GridCell neighbor = GetCell(cell.GridPosition + dir);
+            if (neighbor != null && neighbor.IsOccupied)
+            {
+                EnqueueCell(neighbor);
+            }
+        }
+        
         GameStateManager.Instance.ChangeState(GameStateManager.Instance.CheckingCombo);
     }
 
@@ -156,6 +176,8 @@ public class GridManager : MonoBehaviour
         if (_cellsToProcess.Count == 0) return false;
 
         GridCell centerCell = _cellsToProcess.Dequeue();
+        _cellsInQueue.Remove(centerCell);
+        
         if (centerCell == null || !centerCell.IsOccupied) return ProcessNextMerge();
 
         PizzaPlate centerPlate = centerCell.CurrentPlate;
@@ -196,8 +218,15 @@ public class GridManager : MonoBehaviour
             {
                 if (neighborPlate.HasType(type))
                 {
-                    pendingTransfers.Add((type, neighborPlate));
-                    break; // 1 hướng chỉ cho 1 miếng di chuyển mỗi lượt
+                    // LUẬT "BLOOM SORT CHỐNG KẸT":
+                    // Chỉ cho phép Đĩa đang xét hút nếu số lượng bánh loại đó của nó >= số lượng của hàng xóm.
+                    // Nếu ít hơn, đĩa hàng xóm sẽ là người hút (vì hàng xóm cũng nằm trong _cellsToProcess).
+                    // Điều này ngăn chặn hoàn toàn vòng lặp hút vô tận qua lại.
+                    if (centerPlate.GetCountOf(type) >= neighborPlate.GetCountOf(type))
+                    {
+                        pendingTransfers.Add((type, neighborPlate));
+                        break; // 1 hướng chỉ cho 1 miếng di chuyển mỗi lượt
+                    }
                 }
             }
         }
@@ -230,7 +259,7 @@ public class GridManager : MonoBehaviour
             {
                 if (neighbor.CurrentPlate.GetTotalSlices() == 0)
                 {
-                    Destroy(neighbor.CurrentPlate.gameObject);
+                    ObjectPoolManager.Instance.ReturnPizzaPlate(neighbor.CurrentPlate);
                     neighbor.ClearPlate();
                 }
             }
@@ -240,7 +269,7 @@ public class GridManager : MonoBehaviour
         if (anyTransfer)
         {
             // Bỏ lại vào hàng đợi để check tiếp sau khi tween bay xong
-            _cellsToProcess.Enqueue(centerCell);
+            EnqueueCell(centerCell);
             return true;
         }
         else
@@ -293,10 +322,7 @@ public class GridManager : MonoBehaviour
                         });
 
                         // Neighbor nhận miếng mới có thể đầy, cần được check
-                        if (!_cellsToProcess.Contains(neighbor))
-                        {
-                            _cellsToProcess.Enqueue(neighbor);
-                        }
+                        EnqueueCell(neighbor);
 
                         return true; // Chỉ tráo 1 cặp mỗi lượt
                     }
@@ -316,7 +342,7 @@ public class GridManager : MonoBehaviour
         Debug.Log($"[Merge] NỔ ĐĨA tại {cell.GridPosition}! Giải phóng ô.");
         PizzaPlate plate = cell.CurrentPlate;
         plate.ClearSlices(); // Trả pool miếng bánh
-        Destroy(plate.gameObject);
+        ObjectPoolManager.Instance.ReturnPizzaPlate(plate);
         cell.ClearPlate();
         
         // Combo Cascade: Re-check các đĩa xung quanh
@@ -325,7 +351,7 @@ public class GridManager : MonoBehaviour
             GridCell neighbor = GetCell(cell.GridPosition + dir);
             if (neighbor != null && neighbor.IsOccupied)
             {
-                _cellsToProcess.Enqueue(neighbor);
+                EnqueueCell(neighbor);
             }
         }
     }

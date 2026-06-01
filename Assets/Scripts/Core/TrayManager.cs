@@ -141,16 +141,15 @@ public class TrayManager : MonoBehaviour
             GameObject anchor = _slotAnchors[i];
             Vector3 worldPos = anchor.transform.position;
 
-            GameObject plateObj = Instantiate(_pizzaPlatePrefab, worldPos, Quaternion.identity, anchor.transform);
+            PizzaPlate plate = ObjectPoolManager.Instance.GetPizzaPlate();
+            plate.transform.position = worldPos;
+            plate.transform.rotation = Quaternion.identity;
+            plate.transform.SetParent(anchor.transform);
+            
+            GameObject plateObj = plate.gameObject;
 
             // Ép scale đĩa pizza theo kích thước slot
             FitPlateToSlot(plateObj);
-
-            PizzaPlate plate = plateObj.GetComponent<PizzaPlate>();
-            if (plate == null)
-            {
-                plate = plateObj.AddComponent<PizzaPlate>();
-            }
             plate.Initialize(anchor.transform);
             plate.GenerateRandomSlices(); // Sinh bánh ngẫu nhiên từ JSON config
 

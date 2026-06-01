@@ -14,6 +14,9 @@ public class PizzaPlate : MonoBehaviour
     public PizzaSliceVisual[] Slices => _slices; // Cho phép các Manager đọc dữ liệu miếng bánh trên đĩa
     public float SliceYOffset => _sliceYOffset;
 
+    // --- ZERO GC BUFFERS ---
+    private readonly System.Collections.Generic.Dictionary<int, int> _typeCountBuffer = new System.Collections.Generic.Dictionary<int, int>();
+    private readonly System.Collections.Generic.List<int> _availableTypesBuffer = new System.Collections.Generic.List<int>();
     public void Initialize(Transform parentSlot)
     {
         _originalParent = parentSlot;
@@ -92,16 +95,30 @@ public class PizzaPlate : MonoBehaviour
 
     public System.Collections.Generic.List<int> GetAvailableTypes()
     {
-        System.Collections.Generic.List<int> types = new System.Collections.Generic.List<int>();
-        if (_slices == null) return types;
+        _availableTypesBuffer.Clear();
+        _typeCountBuffer.Clear();
+
+        if (_slices == null) return _availableTypesBuffer;
+        
         foreach (var slice in _slices)
         {
-            if (slice != null && !types.Contains(slice.TypeIndex))
+            if (slice != null)
             {
-                types.Add(slice.TypeIndex);
+                if (!_typeCountBuffer.ContainsKey(slice.TypeIndex)) _typeCountBuffer[slice.TypeIndex] = 0;
+                _typeCountBuffer[slice.TypeIndex]++;
+                
+                if (!_availableTypesBuffer.Contains(slice.TypeIndex))
+                {
+                    _availableTypesBuffer.Add(slice.TypeIndex);
+                }
             }
         }
-        return types;
+        
+        // Sắp xếp các loại bánh theo số lượng giảm dần
+        // Điều này rất quan trọng để tránh vòng lặp vô hạn (2 đĩa cứ hút bánh qua lại)
+        _availableTypesBuffer.Sort((a, b) => _typeCountBuffer[b].CompareTo(_typeCountBuffer[a]));
+        
+        return _availableTypesBuffer;
     }
 
     public bool HasType(int typeIndex)
@@ -112,6 +129,17 @@ public class PizzaPlate : MonoBehaviour
             if (slice != null && slice.TypeIndex == typeIndex) return true;
         }
         return false;
+    }
+
+    public int GetCountOf(int typeIndex)
+    {
+        if (_slices == null) return 0;
+        int count = 0;
+        foreach (var slice in _slices)
+        {
+            if (slice != null && slice.TypeIndex == typeIndex) count++;
+        }
+        return count;
     }
 
     public int GetTotalSlices()
@@ -133,18 +161,18 @@ public class PizzaPlate : MonoBehaviour
     public int GetMajorityType()
     {
         if (_slices == null) return -1;
-        System.Collections.Generic.Dictionary<int, int> counts = new System.Collections.Generic.Dictionary<int, int>();
+        _typeCountBuffer.Clear();
         foreach (var slice in _slices)
         {
             if (slice != null)
             {
-                if (!counts.ContainsKey(slice.TypeIndex)) counts[slice.TypeIndex] = 0;
-                counts[slice.TypeIndex]++;
+                if (!_typeCountBuffer.ContainsKey(slice.TypeIndex)) _typeCountBuffer[slice.TypeIndex] = 0;
+                _typeCountBuffer[slice.TypeIndex]++;
             }
         }
         int maxCount = 0;
         int majorityType = -1;
-        foreach (var kvp in counts)
+        foreach (var kvp in _typeCountBuffer)
         {
             if (kvp.Value > maxCount)
             {
@@ -158,18 +186,18 @@ public class PizzaPlate : MonoBehaviour
     public int GetMinorityType(int excludeType = -1)
     {
         if (_slices == null) return -1;
-        System.Collections.Generic.Dictionary<int, int> counts = new System.Collections.Generic.Dictionary<int, int>();
+        _typeCountBuffer.Clear();
         foreach (var slice in _slices)
         {
             if (slice != null && slice.TypeIndex != excludeType)
             {
-                if (!counts.ContainsKey(slice.TypeIndex)) counts[slice.TypeIndex] = 0;
-                counts[slice.TypeIndex]++;
+                if (!_typeCountBuffer.ContainsKey(slice.TypeIndex)) _typeCountBuffer[slice.TypeIndex] = 0;
+                _typeCountBuffer[slice.TypeIndex]++;
             }
         }
         int minCount = int.MaxValue;
         int minorityType = -1;
-        foreach (var kvp in counts)
+        foreach (var kvp in _typeCountBuffer)
         {
             if (kvp.Value < minCount)
             {
