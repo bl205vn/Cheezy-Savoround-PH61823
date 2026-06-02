@@ -265,8 +265,18 @@ public class GridManager : MonoBehaviour
 
         // --- BƯỚC 1 & 2: Tìm MỘT giao dịch (transfer) tốt nhất ---
         // Sửa lỗi: Quét QUA TẤT CẢ các loại bánh có trên đĩa (ưu tiên loại nhiều nhất trước).
-        // Tránh tình trạng đĩa bị kẹt nếu loại nhiều nhất không thể hút được.
         List<int> centerTypes = centerPlate.GetAvailableTypes();
+
+        // ANTI-BOUNCE LOOP: Nếu đĩa đang có 5 miếng (chỉ còn 1 chỗ trống),
+        // nó sẽ CHỈ HÚT loại bánh chiếm đa số. Nếu hút loại thiểu số, nó sẽ bị đầy 6/6
+        // và lập tức xả loại thiểu số đó ra, tạo vòng lặp vô tận (Bounce Loop 4:2 vs 4:4).
+        if (centerPlate.GetTotalSlices() == 5 && centerTypes.Count > 0)
+        {
+            int majorityType = centerTypes[0];
+            centerTypes.Clear();
+            centerTypes.Add(majorityType);
+        }
+
         bool anyTransfer = false;
         
         foreach (int targetPullType in centerTypes)
