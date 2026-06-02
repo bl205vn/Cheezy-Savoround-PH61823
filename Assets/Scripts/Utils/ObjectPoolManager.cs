@@ -12,11 +12,17 @@ public class ObjectPoolManager : MonoBehaviour
     [SerializeField] private PizzaPlate _pizzaPlatePrefab;
 
     [Header("VFX Pool")]
-    [SerializeField] private PooledVFX _vfxPrefab;
+    [SerializeField] private PooledVFX _explosionVfxPrefab;
+    [SerializeField] private int _initialVfxPoolSize = 15;
+
+    [Header("UI Pool")]
+    [SerializeField] private FloatingText _floatingTextPrefab;
+    [SerializeField] private int _initialTextPoolSize = 15;
 
     private Queue<PizzaSliceVisual> _slicePool = new Queue<PizzaSliceVisual>();
     private Queue<PizzaPlate> _platePool = new Queue<PizzaPlate>();
     private Queue<PooledVFX> _vfxPool = new Queue<PooledVFX>();
+    private Queue<FloatingText> _floatingTextPool = new Queue<FloatingText>();
 
     private void Awake()
     {
@@ -56,14 +62,23 @@ public class ObjectPoolManager : MonoBehaviour
             }
         }
         
-        if (_vfxPrefab != null)
+        if (_explosionVfxPrefab != null)
         {
-            int requiredVFX = 15; // Dự phòng 15 vụ nổ đồng thời
-            for (int i = 0; i < requiredVFX; i++)
+            for (int i = 0; i < _initialVfxPoolSize; i++)
             {
-                PooledVFX vfx = Instantiate(_vfxPrefab, transform);
+                PooledVFX vfx = Instantiate(_explosionVfxPrefab, transform);
                 vfx.gameObject.SetActive(false);
                 _vfxPool.Enqueue(vfx);
+            }
+        }
+
+        for (int i = 0; i < _initialTextPoolSize; i++)
+        {
+            if (_floatingTextPrefab != null)
+            {
+                FloatingText txt = Instantiate(_floatingTextPrefab, transform);
+                txt.gameObject.SetActive(false);
+                _floatingTextPool.Enqueue(txt);
             }
         }
     }
@@ -120,7 +135,7 @@ public class ObjectPoolManager : MonoBehaviour
 
     public PooledVFX GetExplosionVFX()
     {
-        if (_vfxPrefab == null) return null;
+        if (_explosionVfxPrefab == null) return null;
 
         if (_vfxPool.Count > 0)
         {
@@ -130,7 +145,7 @@ public class ObjectPoolManager : MonoBehaviour
         }
 
         Debug.LogWarning("[ObjectPool] VFX Pool bị cạn! Đang tự động tăng thêm...");
-        PooledVFX newVfx = Instantiate(_vfxPrefab, transform);
+        PooledVFX newVfx = Instantiate(_explosionVfxPrefab, transform);
         return newVfx;
     }
 
@@ -139,5 +154,26 @@ public class ObjectPoolManager : MonoBehaviour
         vfx.gameObject.SetActive(false);
         vfx.transform.SetParent(transform);
         _vfxPool.Enqueue(vfx);
+    }
+
+    public FloatingText GetFloatingText()
+    {
+        if (_floatingTextPrefab == null) return null;
+
+        if (_floatingTextPool.Count > 0)
+        {
+            FloatingText txt = _floatingTextPool.Dequeue();
+            txt.gameObject.SetActive(true);
+            return txt;
+        }
+
+        return Instantiate(_floatingTextPrefab, transform);
+    }
+
+    public void ReturnFloatingText(FloatingText txt)
+    {
+        txt.gameObject.SetActive(false);
+        txt.transform.SetParent(transform);
+        _floatingTextPool.Enqueue(txt);
     }
 }

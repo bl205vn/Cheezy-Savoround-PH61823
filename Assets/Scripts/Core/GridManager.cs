@@ -460,6 +460,13 @@ public class GridManager : MonoBehaviour
         {
             AudioManager.Instance.PlayExplosionSound();
         }
+        
+        // --- CHẠY CHỮ ĐIỂM SỐ BAY LÊN ---
+        FloatingText scoreText = ObjectPoolManager.Instance.GetFloatingText();
+        if (scoreText != null)
+        {
+            scoreText.Setup("+100", plate.transform.position + new Vector3(0, 1f, 0));
+        }
      
         plate.ClearSlices(); // Trả pool miếng bánh
         
