@@ -454,6 +454,12 @@ public class GridManager : MonoBehaviour
             Vector3 vfxPos = plate.transform.position + new Vector3(0, 0.5f, 0);
             explosionVFX.PlayAt(vfxPos, plate.transform.localScale);
         }
+
+        // --- PHÁT ÂM THANH NỔ (Có Pitch Shift) ---
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayExplosionSound();
+        }
      
         plate.ClearSlices(); // Trả pool miếng bánh
         
