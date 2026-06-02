@@ -222,7 +222,8 @@ public class GridManager : MonoBehaviour
             if (centerPlate.IsFullAndPure())
             {
                 ExplodePlate(centerCell);
-                return ProcessNextMerge();
+                BezierTween.Instance.StartTween(centerCell.transform, centerCell.transform.position, arcHeight: 0, duration: 0.4f);
+                return true;
             }
             
             // Nếu đĩa đầy mà chứa rác -> Bật chế độ xả rác liên tục (Áp dụng cho mọi cấp độ ưu tiên)
@@ -333,7 +334,7 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        // --- BƯỚC 3: Xử lý Cascade / Kiểm tra nổ đĩa ---
+        // --- BƯỚC 3: Xử lý Cascade / Trả về kết quả ---
         if (anyTransfer)
         {
             // Bỏ lại vào hàng đợi để check tiếp sau khi tween bay xong
@@ -342,17 +343,7 @@ public class GridManager : MonoBehaviour
         }
         else
         {
-            if (centerPlate.IsFullAndPure())
-            {
-                // ĐẶC QUYỀN TRẠM TRUNG CHUYỂN: CHỈ Ưu tiên 9 không nổ ngay
-                if (centerPlate.Priority != 9)
-                {
-                    ExplodePlate(centerCell);
-                    // Tăng thời gian chờ lên 0.4s để hiệu ứng nổ chuỗi hiện rõ ràng hơn (ko bị dính chùm)
-                    BezierTween.Instance.StartTween(centerCell.transform, centerCell.transform.position, arcHeight: 0, duration: 20f);
-                    return true;
-                }
-            }
+            // Không có bất kỳ giao dịch Hút/Đẩy nào xảy ra, chuyển sang xử lý đĩa tiếp theo trong queue
             return ProcessNextMerge();
         }
     }
@@ -495,11 +486,6 @@ public class GridManager : MonoBehaviour
                     {
                         plate.PlayShrinkAndReturn();
                         cell.ClearPlate();
-                    }
-                    else if (plate.IsFullAndPure())
-                    {
-                        ExplodePlate(cell);
-                        anyExploded = true;
                     }
                 }
                 
