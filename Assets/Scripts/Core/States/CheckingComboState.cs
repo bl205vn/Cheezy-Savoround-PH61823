@@ -15,8 +15,17 @@ public class CheckingComboState : IGameState
             bool hasExploded = GridManager.Instance.CleanupPrivilegedPlates();
             if (hasExploded)
             {
-                // Explosion resets neighboring priorities to 0 and might trigger combo logic in next frame
-                GameStateManager.Instance.ChangeState(GameStateManager.Instance.Animating);
+                // Vụ nổ đĩa reset mức ưu tiên của các đĩa lân cận về 0 và đưa chúng vào hàng đợi.
+                // Ta phải chạy lại CheckingCombo để xử lý chúng tiếp.
+                if (BezierTween.Instance != null && BezierTween.Instance.HasActiveTweens)
+                {
+                    GameStateManager.Instance.ChangeState(GameStateManager.Instance.Animating);
+                }
+                else
+                {
+                    // Không có tween nào đang chạy, kiểm tra combo ngay lập tức
+                    GameStateManager.Instance.ChangeState(GameStateManager.Instance.CheckingCombo);
+                }
             }
             else
             {

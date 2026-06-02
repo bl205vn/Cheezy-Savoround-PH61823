@@ -91,6 +91,16 @@ public class TrayManager : MonoBehaviour
         return true;
     }
 
+    public bool IsPlateInTray(PizzaPlate plate)
+    {
+        if (_slotPlates == null) return false;
+        for (int i = 0; i < _slotPlates.Length; i++)
+        {
+            if (_slotPlates[i] == plate) return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Khởi tạo khay chứa: tạo các anchor slot + sinh batch đĩa đầu tiên.
     /// Được gọi bởi LevelManager khi load level.

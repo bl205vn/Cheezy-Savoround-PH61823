@@ -67,8 +67,12 @@ public class InputManager : MonoBehaviour
         {
             if (hit.collider.TryGetComponent(out PizzaPlate plate))
             {
-                _draggedPlate = plate;
-                _draggedPlate.PickUp();
+                // Chỉ cho phép bốc đĩa từ khay (không cho phép bốc đĩa đã đặt trên Grid)
+                if (TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate))
+                {
+                    _draggedPlate = plate;
+                    _draggedPlate.PickUp();
+                }
             }
         }
     }

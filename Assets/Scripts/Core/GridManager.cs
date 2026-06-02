@@ -282,17 +282,20 @@ public class GridManager : MonoBehaviour
         var pendingTransfers = new List<(int typeIndex, PizzaPlate source)>();
         List<int> centerTypes = centerPlate.GetAvailableTypes();
         
-        foreach (var dir in _directions)
+        if (centerTypes.Count > 0)
         {
-            GridCell neighbor = GetCell(centerCell.GridPosition + dir);
-            if (neighbor == null || !neighbor.IsOccupied) continue;
+            // CHỈ HÚT LOẠI BÁNH CHIẾM ĐA SỐ NHẤT! (Tránh tự hút rác vào người)
+            // Việc này giúp đĩa có "sự tập trung", tránh việc xả rác xong lại hút ngược rác đó vào.
+            int targetPullType = centerTypes[0];
 
-            PizzaPlate neighborPlate = neighbor.CurrentPlate;
-
-            // Tìm 1 loại pizza trong đĩa giữa mà đĩa lân cận cũng có
-            foreach (int type in centerTypes)
+            foreach (var dir in _directions)
             {
-                if (neighborPlate.HasType(type))
+                GridCell neighbor = GetCell(centerCell.GridPosition + dir);
+                if (neighbor == null || !neighbor.IsOccupied) continue;
+
+                PizzaPlate neighborPlate = neighbor.CurrentPlate;
+
+                if (neighborPlate.HasType(targetPullType))
                 {
                     // LUẬT "BLOOM SORT CHỐNG KẸT" KẾT HỢP ƯU TIÊN:
                     // Đĩa có Ưu tiên cao hơn luôn được quyền hút từ đĩa thấp hơn (hướng về tâm chấn).
@@ -300,13 +303,13 @@ public class GridManager : MonoBehaviour
                     // Nếu bằng nhau, số lượng lớn hơn hoặc bằng sẽ được hút.
                     bool canPull = false;
                     if (centerPlate.Priority > neighborPlate.Priority) canPull = true;
-                    else if (centerPlate.Priority < neighborPlate.Priority) canPull = centerPlate.GetCountOf(type) > neighborPlate.GetCountOf(type);
-                    else canPull = centerPlate.GetCountOf(type) >= neighborPlate.GetCountOf(type);
+                    else if (centerPlate.Priority < neighborPlate.Priority) canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
+                    else canPull = centerPlate.GetCountOf(targetPullType) >= neighborPlate.GetCountOf(targetPullType);
 
                     if (canPull)
                     {
-                        pendingTransfers.Add((type, neighborPlate));
-                        break; // 1 hướng chỉ cho 1 miếng di chuyển mỗi lượt
+                        pendingTransfers.Add((targetPullType, neighborPlate));
+                        // 1 hướng chỉ cho 1 miếng di chuyển mỗi lượt (nếu có nhiều loại thì mới break, ở đây chỉ có 1 loại nên break luôn)
                     }
                 }
             }
@@ -388,6 +391,15 @@ public class GridManager : MonoBehaviour
             PizzaPlate neighborPlate = neighbor.CurrentPlate;
             if (neighborPlate.IsFull()) continue; // Phải còn chỗ mới đẩy được
 
+            // CHỐNG DỘI RÁC (BOUNCE LOOP):
+            // Nếu đĩa lân cận chỉ còn 1 chỗ trống (5/6), việc đẩy rác vào sẽ làm nó ĐẦY (6/6).
+            // Khi bị ĐẦY, nó sẽ bật IsPurging và dội ngược rác lại cho chính mình.
+            // NGOẠI TRỪ trường hợp: đĩa kia đang có 5 miếng cùng loại với miếng sắp đẩy, đẩy vào là Tinh Khiết và Nổ!
+            if (neighborPlate.GetTotalSlices() == 5 && neighborPlate.GetCountOf(pushType) != 5)
+            {
+                continue; // Cấm đẩy rác chót vào đĩa sắp đầy để tránh loop!
+            }
+
             // Tính điểm chọn "thùng rác" tốt nhất theo ý người dùng
             int score = 0;
             int countOnNeighbor = neighborPlate.GetCountOf(pushType);
@@ -434,7 +446,17 @@ public class GridManager : MonoBehaviour
     {
         Debug.Log($"[Merge] NỔ ĐĨA tại {cell.GridPosition}! Giải phóng ô.");
         PizzaPlate plate = cell.CurrentPlate;
+        
+        // --- CHẠY HIỆU ỨNG VFX NỔ (Scale tự động theo đĩa) ---
+        PooledVFX explosionVFX = ObjectPoolManager.Instance.GetExplosionVFX();
+        if (explosionVFX != null)
+        {
+            Vector3 vfxPos = plate.transform.position + new Vector3(0, 0.5f, 0);
+            explosionVFX.PlayAt(vfxPos, plate.transform.localScale);
+        }
+     
         plate.ClearSlices(); // Trả pool miếng bánh
+        
         ObjectPoolManager.Instance.ReturnPizzaPlate(plate);
         cell.ClearPlate();
         

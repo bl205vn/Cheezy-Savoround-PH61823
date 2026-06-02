@@ -11,8 +11,12 @@ public class ObjectPoolManager : MonoBehaviour
     [Header("Pizza Plate Pool")]
     [SerializeField] private PizzaPlate _pizzaPlatePrefab;
 
+    [Header("VFX Pool")]
+    [SerializeField] private PooledVFX _vfxPrefab;
+
     private Queue<PizzaSliceVisual> _slicePool = new Queue<PizzaSliceVisual>();
     private Queue<PizzaPlate> _platePool = new Queue<PizzaPlate>();
+    private Queue<PooledVFX> _vfxPool = new Queue<PooledVFX>();
 
     private void Awake()
     {
@@ -49,6 +53,17 @@ public class ObjectPoolManager : MonoBehaviour
                 PizzaPlate plate = Instantiate(_pizzaPlatePrefab, transform);
                 plate.gameObject.SetActive(false);
                 _platePool.Enqueue(plate);
+            }
+        }
+        
+        if (_vfxPrefab != null)
+        {
+            int requiredVFX = 15; // Dự phòng 15 vụ nổ đồng thời
+            for (int i = 0; i < requiredVFX; i++)
+            {
+                PooledVFX vfx = Instantiate(_vfxPrefab, transform);
+                vfx.gameObject.SetActive(false);
+                _vfxPool.Enqueue(vfx);
             }
         }
     }
@@ -101,5 +116,28 @@ public class ObjectPoolManager : MonoBehaviour
         plate.gameObject.SetActive(false);
         plate.transform.SetParent(transform);
         _platePool.Enqueue(plate);
+    }
+
+    public PooledVFX GetExplosionVFX()
+    {
+        if (_vfxPrefab == null) return null;
+
+        if (_vfxPool.Count > 0)
+        {
+            PooledVFX vfx = _vfxPool.Dequeue();
+            vfx.gameObject.SetActive(true);
+            return vfx;
+        }
+
+        Debug.LogWarning("[ObjectPool] VFX Pool bị cạn! Đang tự động tăng thêm...");
+        PooledVFX newVfx = Instantiate(_vfxPrefab, transform);
+        return newVfx;
+    }
+
+    public void ReturnVFX(PooledVFX vfx)
+    {
+        vfx.gameObject.SetActive(false);
+        vfx.transform.SetParent(transform);
+        _vfxPool.Enqueue(vfx);
     }
 }
