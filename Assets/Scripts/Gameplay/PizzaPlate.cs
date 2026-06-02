@@ -1,4 +1,5 @@
 using UnityEngine;
+using DG.Tweening;
 
 public class PizzaPlate : MonoBehaviour
 {
@@ -6,6 +7,17 @@ public class PizzaPlate : MonoBehaviour
     [SerializeField] private float _pickUpOffset = 0.5f;
     [Tooltip("Nâng miếng bánh lên trên mặt đĩa (chỉnh thành 1 nếu cần)")]
     [SerializeField] private float _sliceYOffset = 1f;
+
+    [Header("Game Feel")]
+    [SerializeField] private float _snapSquashDuration = 0.08f;
+    [SerializeField] private Vector3 _squashScaleMultiplier = new Vector3(1.3f, 0.7f, 1.3f);
+    [SerializeField] private Vector3 _stretchScaleMultiplier = new Vector3(0.85f, 1.2f, 0.85f);
+    [SerializeField] private float _shakeDuration = 0.3f;
+    [SerializeField] private float _shakeStrength = 0.3f;
+    [SerializeField] private float _returnDuration = 0.2f;
+    [SerializeField] private float _shrinkDuration = 0.2f;
+    
+    private Vector3 _baseScale = Vector3.one;
 
     private Vector3 _originalPosition;
     private Transform _originalParent;
@@ -15,6 +27,7 @@ public class PizzaPlate : MonoBehaviour
     public float SliceYOffset => _sliceYOffset;
     public int Priority { get; set; } = 0; // Ưu tiên 9 -> 0 cho logic Trạm trung chuyển
     public bool IsPurging { get; set; } = false; // Cờ đánh dấu đĩa đang trong trạng thái xả rác (không được hút)
+    public bool IsReturning { get; private set; } = false; // Cờ khóa tương tác khi đĩa đang bay về khay
 
     // --- ZERO GC BUFFERS ---
     private readonly System.Collections.Generic.Dictionary<int, int> _typeCountBuffer = new System.Collections.Generic.Dictionary<int, int>();
@@ -29,6 +42,7 @@ public class PizzaPlate : MonoBehaviour
 
     public void PickUp()
     {
+        transform.DOKill(); // Dừng mọi hiệu ứng (như đang bay về khay) nếu người chơi chộp lại đĩa giữa chừng
         // Nâng đĩa lên một chút theo trục Y để tạo hiệu ứng nhấc lên
         transform.position = new Vector3(transform.position.x, _originalPosition.y + _pickUpOffset, transform.position.z);
     }
@@ -41,9 +55,43 @@ public class PizzaPlate : MonoBehaviour
 
     public void ReturnToOriginalSlot()
     {
-        // Trả đĩa về vị trí khay ban đầu
+        // Trả đĩa về vị trí khay ban đầu (instant)
         transform.position = _originalPosition;
         transform.SetParent(_originalParent);
+    }
+
+    public void PlayShakeAndReturn()
+    {
+        transform.DOKill();
+        IsReturning = true; // Khóa tương tác
+        
+        Sequence seq = DOTween.Sequence();
+        
+        // Rung ngang tại vị trí hiện tại
+        seq.Append(transform.DOShakePosition(_shakeDuration, strength: new Vector3(_shakeStrength, 0, 0), vibrato: 20, randomness: 0, snapping: false, fadeOut: true));
+        
+        // Bay mượt về vị trí gốc trên khay
+        seq.Append(transform.DOMove(_originalPosition, _returnDuration).SetEase(Ease.OutQuad));
+        
+        seq.OnComplete(() => 
+        {
+            // Trả lại parent là khay sau khi bay xong
+            transform.SetParent(_originalParent);
+            IsReturning = false; // Mở khóa tương tác
+        });
+    }
+
+    public void PlayShrinkAndReturn()
+    {
+        transform.DOKill();
+        
+        // Thu nhỏ lại thành 0
+        transform.DOScale(Vector3.zero, _shrinkDuration).SetEase(Ease.InBack).OnComplete(() => 
+        {
+            // Reset lại scale gốc trước khi tống vào Pool (để lần sau lấy ra không bị tàng hình)
+            transform.localScale = _baseScale;
+            ObjectPoolManager.Instance.ReturnPizzaPlate(this);
+        });
     }
 
     public void PlaceAt(Vector3 targetPos, Transform newParent)
@@ -52,9 +100,10 @@ public class PizzaPlate : MonoBehaviour
         transform.SetParent(newParent, true);
         _originalParent = newParent;
         _originalPosition = targetPos;
+        _baseScale = transform.localScale; // Lưu lại scale sau khi parent để tránh lỗi scale 2 lần hoặc sai lệch kích thước lưới
     }
 
-    public System.Collections.IEnumerator AnimateToCell(Vector3 startPos, Vector3 endPos, float duration = 0.25f)
+    public System.Collections.IEnumerator AnimateToCell(Vector3 startPos, Vector3 endPos, float duration = 0.25f, System.Action onComplete = null)
     {
         Vector3 midPoint = (startPos + endPos) * 0.5f;
         Vector3 controlPoint = midPoint + Vector3.up * 0.8f;
@@ -74,6 +123,22 @@ public class PizzaPlate : MonoBehaviour
         }
         
         transform.position = endPos;
+        onComplete?.Invoke();
+    }
+
+    public void PlaySnapEffect()
+    {
+        transform.DOKill();
+        transform.localScale = _baseScale; // Reset lại scale gốc trong trường hợp tween cũ bị ngắt quãng
+        
+        Sequence seq = DOTween.Sequence();
+        
+        Vector3 squashScale = new Vector3(_baseScale.x * _squashScaleMultiplier.x, _baseScale.y * _squashScaleMultiplier.y, _baseScale.z * _squashScaleMultiplier.z);
+        Vector3 stretchScale = new Vector3(_baseScale.x * _stretchScaleMultiplier.x, _baseScale.y * _stretchScaleMultiplier.y, _baseScale.z * _stretchScaleMultiplier.z);
+        
+        seq.Append(transform.DOScale(squashScale, _snapSquashDuration).SetEase(Ease.OutQuad));
+        seq.Append(transform.DOScale(stretchScale, _snapSquashDuration).SetEase(Ease.OutQuad));
+        seq.Append(transform.DOScale(_baseScale, _snapSquashDuration).SetEase(Ease.OutBounce));
     }
 
     private void OnDestroy()
@@ -89,6 +154,7 @@ public class PizzaPlate : MonoBehaviour
         {
             if (_slices[i] != null && ObjectPoolManager.Instance != null)
             {
+                _slices[i].transform.DOKill(); // Đảm bảo dừng mọi animation xoay trước khi vứt vào Pool
                 ObjectPoolManager.Instance.ReturnPizzaSlice(_slices[i]);
                 _slices[i] = null;
             }
@@ -239,13 +305,48 @@ public class PizzaPlate : MonoBehaviour
                 // Bắt buộc dùng true để giữ nguyên World Position, tránh lỗi teleport!
                 slice.transform.SetParent(this.transform, true);
                 
-                float angleStep = 360f / _slices.Length;
-                slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
+                // Tự động dồn mảng và tạo hiệu ứng xoay về chỗ mới
+                CompactAndRearrangeSlices();
                 
                 return true;
             }
         }
         return false;
+    }
+
+    public void CompactAndRearrangeSlices()
+    {
+        if (_slices == null) return;
+        
+        int nonNullIndex = 0;
+        
+        // Compact array (dồn null về cuối) in-place
+        for (int i = 0; i < _slices.Length; i++)
+        {
+            if (_slices[i] != null)
+            {
+                if (i != nonNullIndex)
+                {
+                    _slices[nonNullIndex] = _slices[i];
+                    _slices[i] = null;
+                }
+                nonNullIndex++;
+            }
+        }
+        
+        // Tính lại góc xoay mượt mà cho các miếng bánh còn lại
+        float angleStep = 360f / _slices.Length;
+        for (int i = 0; i < nonNullIndex; i++)
+        {
+            PizzaSliceVisual slice = _slices[i];
+            if (slice != null)
+            {
+                float targetAngle = i * angleStep;
+                
+                slice.transform.DOKill(); // Tránh bị đè tween
+                slice.transform.DOLocalRotate(new Vector3(0, targetAngle, 0), 0.2f).SetEase(Ease.OutQuad);
+            }
+        }
     }
 
     public PizzaSliceVisual RemoveSliceOfType(int typeIndex)
@@ -257,6 +358,10 @@ public class PizzaPlate : MonoBehaviour
             {
                 PizzaSliceVisual slice = _slices[i];
                 _slices[i] = null;
+                
+                // Dồn mảng và xếp lại bánh sau khi rút 1 miếng
+                CompactAndRearrangeSlices();
+                
                 return slice;
             }
         }

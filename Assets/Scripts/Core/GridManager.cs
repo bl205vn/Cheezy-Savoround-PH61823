@@ -348,7 +348,7 @@ public class GridManager : MonoBehaviour
                     {
                         continue; 
                     }
-                    ObjectPoolManager.Instance.ReturnPizzaPlate(neighbor.CurrentPlate);
+                    neighbor.CurrentPlate.PlayShrinkAndReturn();
                     neighbor.ClearPlate();
                 }
             }
@@ -498,7 +498,7 @@ public class GridManager : MonoBehaviour
                 {
                     if (plate.GetTotalSlices() == 0)
                     {
-                        ObjectPoolManager.Instance.ReturnPizzaPlate(plate);
+                        plate.PlayShrinkAndReturn();
                         cell.ClearPlate();
                     }
                     else if (plate.IsFullAndPure())

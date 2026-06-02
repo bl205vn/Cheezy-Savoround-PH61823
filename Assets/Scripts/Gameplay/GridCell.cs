@@ -22,11 +22,14 @@ public class GridCell : MonoBehaviour
         
         Vector3 snapPosition = new Vector3(transform.position.x, transform.position.y + _snapOffsetY, transform.position.z);
         
-        // Gọi Coroutine nhảy vào ô
-        plate.StartCoroutine(plate.AnimateToCell(plate.transform.position, snapPosition));
-        
-        // Cập nhật data
+        // Cập nhật data trước để ghi nhận _baseScale đúng với parent mới
         plate.PlaceAt(snapPosition, transform);
+        
+        // Gọi Coroutine nhảy vào ô và chạy hiệu ứng Squash sau khi xong
+        plate.StartCoroutine(plate.AnimateToCell(plate.transform.position, snapPosition, 0.25f, () => 
+        {
+            plate.PlaySnapEffect();
+        }));
     }
 
     public void ClearPlate()

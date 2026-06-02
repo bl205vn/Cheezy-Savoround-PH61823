@@ -67,8 +67,8 @@ public class InputManager : MonoBehaviour
         {
             if (hit.collider.TryGetComponent(out PizzaPlate plate))
             {
-                // Chỉ cho phép bốc đĩa từ khay (không cho phép bốc đĩa đã đặt trên Grid)
-                if (TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate))
+                // Chỉ cho phép bốc đĩa từ khay VÀ đĩa đó không phải đang bay về khay
+                if (TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate) && !plate.IsReturning)
                 {
                     _draggedPlate = plate;
                     _draggedPlate.PickUp();
@@ -117,7 +117,7 @@ public class InputManager : MonoBehaviour
         }
 
         // Không tìm thấy ô hoặc ô đã có đĩa -> trả về chỗ cũ
-        _draggedPlate.ReturnToOriginalSlot();
+        _draggedPlate.PlayShakeAndReturn();
         if (AudioManager.Instance != null) AudioManager.Instance.PlayErrorSound();
         _draggedPlate = null;
     }
