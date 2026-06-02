@@ -16,6 +16,7 @@ public class GridManager : MonoBehaviour
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
     private List<GridCell> _cellsToProcess = new List<GridCell>();
     private HashSet<GridCell> _cellsInQueue = new HashSet<GridCell>();
+    private int _mergeSequenceCount = 0; // Đếm số lần merge liên tiếp để tăng tốc độ bay
 
     private void EnqueueCell(GridCell cell)
     {
@@ -181,6 +182,7 @@ public class GridManager : MonoBehaviour
 
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell)
     {
+        _mergeSequenceCount = 0; // Reset bộ đếm khi bắt đầu một combo mới
         CalculatePriorities(cell); // Gán trọng số Dijkstra từ tâm chấn
         EnqueueCell(cell);
         
@@ -260,16 +262,15 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        // --- BƯỚC 1: Thu thập tất cả transfer cần làm ---
-        // Mỗi hướng chỉ 1 miếng (giống Bloom Sort)
-        var pendingTransfers = new List<(int typeIndex, PizzaPlate source)>();
+        // --- BƯỚC 1 & 2: Tìm MỘT giao dịch (transfer) tốt nhất ---
+        // Sửa lỗi: Quét QUA TẤT CẢ các loại bánh có trên đĩa (ưu tiên loại nhiều nhất trước).
+        // Tránh tình trạng đĩa bị kẹt nếu loại nhiều nhất không thể hút được.
         List<int> centerTypes = centerPlate.GetAvailableTypes();
+        bool anyTransfer = false;
         
-        if (centerTypes.Count > 0)
+        foreach (int targetPullType in centerTypes)
         {
-            // CHỈ HÚT LOẠI BÁNH CHIẾM ĐA SỐ NHẤT! (Tránh tự hút rác vào người)
-            // Việc này giúp đĩa có "sự tập trung", tránh việc xả rác xong lại hút ngược rác đó vào.
-            int targetPullType = centerTypes[0];
+            if (centerPlate.IsFull()) break;
 
             foreach (var dir in _directions)
             {
@@ -280,10 +281,7 @@ public class GridManager : MonoBehaviour
 
                 if (neighborPlate.HasType(targetPullType))
                 {
-                    // LUẬT "BLOOM SORT CHỐNG KẸT" KẾT HỢP ƯU TIÊN:
-                    // Đĩa có Ưu tiên cao hơn luôn được quyền hút từ đĩa thấp hơn (hướng về tâm chấn).
-                    // Nếu ưu tiên thấp hơn, chỉ được hút nếu số lượng lớn hơn HẲN.
-                    // Nếu bằng nhau, số lượng lớn hơn hoặc bằng sẽ được hút.
+                    // Ưu tiên 9 hút mạnh hơn
                     bool canPull = false;
                     if (centerPlate.Priority > neighborPlate.Priority) canPull = true;
                     else if (centerPlate.Priority < neighborPlate.Priority) canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
@@ -291,31 +289,29 @@ public class GridManager : MonoBehaviour
 
                     if (canPull)
                     {
-                        pendingTransfers.Add((targetPullType, neighborPlate));
-                        // 1 hướng chỉ cho 1 miếng di chuyển mỗi lượt (nếu có nhiều loại thì mới break, ở đây chỉ có 1 loại nên break luôn)
+                        PizzaSliceVisual slice = neighborPlate.RemoveSliceOfType(targetPullType);
+                        if (slice != null)
+                        {
+                            if (centerPlate.TryAddSlice(slice, out int addedIndex))
+                            {
+                                Vector3 targetWorldPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
+                                
+                                // Tăng tốc độ bay: Mỗi lần bay nhanh hơn một chút, tối đa 0.08s
+                                float flyDuration = Mathf.Max(0.08f, 0.25f - (_mergeSequenceCount * 0.02f));
+                                _mergeSequenceCount++;
+
+                                BezierTween.Instance.StartTween(slice.transform, targetWorldPos, arcHeight: 1.5f, duration: flyDuration, onComplete: (t) => {
+                                    slice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
+                                });
+                                
+                                anyTransfer = true;
+                                break; // Chỉ hút 1 miếng cho mỗi lượt để tạo hiệu ứng bay lần lượt!
+                            }
+                        }
                     }
                 }
             }
-        }
-
-        // --- BƯỚC 2: Thực thi tất cả transfer cùng lúc ---
-        bool anyTransfer = false;
-        foreach (var transfer in pendingTransfers)
-        {
-            if (centerPlate.IsFull()) break; // Đĩa giữa đã đầy thì ngưng
-
-            PizzaSliceVisual slice = transfer.source.RemoveSliceOfType(transfer.typeIndex);
-            if (slice != null)
-            {
-                if (centerPlate.TryAddSlice(slice, out int addedIndex))
-                {
-                    Vector3 targetWorldPos = centerPlate.transform.position + new Vector3(0, centerPlate.SliceYOffset, 0);
-                    BezierTween.Instance.StartTween(slice.transform, targetWorldPos, onComplete: (t) => {
-                        slice.transform.localPosition = new Vector3(0, centerPlate.SliceYOffset, 0);
-                    });
-                    anyTransfer = true;
-                }
-            }
+            if (anyTransfer) break; // Chỉ hút 1 miếng cho mỗi lượt!
         }
 
         // Dọn dẹp các đĩa bị hút sạch bánh
@@ -412,7 +408,11 @@ public class GridManager : MonoBehaviour
             {
                 neighborPlate.TryAddSlice(pushSlice, out _);
                 Vector3 targetPos = neighborPlate.transform.position + new Vector3(0, neighborPlate.SliceYOffset, 0);
-                BezierTween.Instance.StartTween(pushSlice.transform, targetPos, onComplete: (t) => {
+                
+                float flyDuration = Mathf.Max(0.08f, 0.25f - (_mergeSequenceCount * 0.02f));
+                _mergeSequenceCount++;
+                
+                BezierTween.Instance.StartTween(pushSlice.transform, targetPos, arcHeight: 1.5f, duration: flyDuration, onComplete: (t) => {
                     pushSlice.transform.localPosition = new Vector3(0, neighborPlate.SliceYOffset, 0);
                 });
                 
