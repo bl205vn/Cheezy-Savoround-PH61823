@@ -5,9 +5,12 @@ public class InputManager : MonoBehaviour
 {
     private Camera _mainCamera;
     private PizzaPlate _draggedPlate;
+    private GridCell _lastHighlightedCell;
     private Plane _dragPlane;
     [SerializeField] private float _dragHeight = 1.0f; // Độ cao của đĩa khi kéo
     [SerializeField] private LayerMask _gridLayerMask = Physics.DefaultRaycastLayers;
+    [Header("Ghost Preview")]
+    [SerializeField] private GhostPreview _ghostPreview;
 
     private const float DEBUG_RAY_LENGTH = 5f;
     private const float DEBUG_RAY_DURATION = 2f;
@@ -30,6 +33,16 @@ public class InputManager : MonoBehaviour
         _mainCamera = Camera.main;
         // Mặt phẳng dùng để kéo thả (nằm ngang y = dragHeight)
         _dragPlane = new Plane(Vector3.up, new Vector3(0, _dragHeight, 0));
+
+        // Tự động Instantiate Ghost Preview nếu người dùng kéo Prefab từ Project vào
+        if (_ghostPreview != null)
+        {
+            if (_ghostPreview.gameObject.scene != this.gameObject.scene)
+            {
+                _ghostPreview = Instantiate(_ghostPreview);
+            }
+            _ghostPreview.Hide();
+        }
     }
 
     private void Update()
@@ -87,11 +100,55 @@ public class InputManager : MonoBehaviour
 
             // Vẽ gizmo (Debug Ray) màu cam đậm hướng xuống dưới khi đang kéo
             Debug.DrawRay(_draggedPlate.transform.position, Vector3.down * DEBUG_RAY_LENGTH, new Color(1.0f, 0.5f, 0.0f));
+            
+            // Xử lý Highlight ô lưới bên dưới
+            Ray downwardRay = new Ray(_draggedPlate.transform.position, Vector3.down);
+            int hitCount = Physics.RaycastNonAlloc(downwardRay, _hitBuffer, 100f, _gridLayerMask);
+            Array.Sort(_hitBuffer, 0, hitCount, _hitComparer);
+
+            GridCell currentTargetCell = null;
+            for (int i = 0; i < hitCount; i++)
+            {
+                var hit = _hitBuffer[i];
+                if (hit.collider.TryGetComponent(out GridCell cell) && !cell.IsOccupied)
+                {
+                    currentTargetCell = cell;
+                    break;
+                }
+            }
+
+            // Xử lý hiển thị bóng mờ (Ghost Plate) snap vào tâm ô lưới
+            if (currentTargetCell != null)
+            {
+                if (_ghostPreview != null)
+                {
+                    // Lấy đúng scale gốc của đĩa (khi đang nằm trên mâm/bàn) để gán cho Ghost
+                    _ghostPreview.transform.localScale = _draggedPlate.BaseScale;
+                    _ghostPreview.ShowAt(currentTargetCell.GetDropPosition());
+                }
+            }
+            else
+            {
+                if (_ghostPreview != null)
+                {
+                    _ghostPreview.Hide();
+                }
+            }
+
+            _lastHighlightedCell = currentTargetCell;
         }
     }
 
     private void TryDropPlate()
     {
+        // Ẩn bóng mờ khi thả đĩa
+        if (_ghostPreview != null)
+        {
+            _ghostPreview.Hide();
+        }
+
+        _lastHighlightedCell = null;
+
         // Bắn tia từ đĩa xuống dưới để tìm lưới
         Ray ray = new Ray(_draggedPlate.transform.position, Vector3.down);
         

@@ -7,12 +7,40 @@ public class GridCell : MonoBehaviour
     public PizzaPlate CurrentPlate { get; private set; }
 
     [SerializeField] private float _snapOffsetY = 0f;
+    
+    private Renderer[] _renderers;
+    private MaterialPropertyBlock _propBlock;
+    private Color _baseColor;
 
-    public void Initialize(Vector2Int gridPos)
+    private void Awake()
+    {
+        _renderers = GetComponentsInChildren<Renderer>();
+        _propBlock = new MaterialPropertyBlock();
+    }
+
+    public void Initialize(Vector2Int gridPos, Color baseColor)
     {
         GridPosition = gridPos;
         IsOccupied = false;
         CurrentPlate = null;
+        _baseColor = baseColor;
+        
+        // Áp dụng màu base ban đầu (Zero-GC)
+        if (_renderers != null && _propBlock != null)
+        {
+            foreach (var rend in _renderers)
+            {
+                rend.GetPropertyBlock(_propBlock);
+                _propBlock.SetColor("_Color", _baseColor);
+                _propBlock.SetColor("_BaseColor", _baseColor);
+                rend.SetPropertyBlock(_propBlock);
+            }
+        }
+    }
+
+    public Vector3 GetDropPosition()
+    {
+        return transform.position + new Vector3(0, _snapOffsetY, 0);
     }
 
     public void PlacePlate(PizzaPlate plate)

@@ -16,8 +16,8 @@ public class PizzaPlate : MonoBehaviour
     [SerializeField] private float _shakeStrength = 0.3f;
     [SerializeField] private float _returnDuration = 0.2f;
     [SerializeField] private float _shrinkDuration = 0.2f;
-    
     private Vector3 _baseScale = Vector3.one;
+    public Vector3 BaseScale => _baseScale;
 
     private Vector3 _originalPosition;
     private Transform _originalParent;
@@ -38,6 +38,7 @@ public class PizzaPlate : MonoBehaviour
         transform.SetParent(parentSlot);
         transform.localPosition = new Vector3(0, _spawnHeight, 0); // Sinh cách khoảng y
         _originalPosition = transform.position;
+        _baseScale = transform.localScale; // Cập nhật scale gốc để dùng cho các logic UI/Ghost
     }
 
     public void PickUp()

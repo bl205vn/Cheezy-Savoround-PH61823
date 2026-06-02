@@ -69,14 +69,13 @@ public class GridManager : MonoBehaviour
                 
                 // Checkerboard: chẵn = tối, lẻ = sáng
                 bool isEven = (x + y) % 2 == 0;
-                ApplyCellColor(cellObj, isEven ? _darkCellColor : _lightCellColor);
                 
                 GridCell cellComp = cellObj.GetComponent<GridCell>();
                 if (cellComp == null) 
                 {
                     cellComp = cellObj.AddComponent<GridCell>();
                 }
-                cellComp.Initialize(gridPos);
+                cellComp.Initialize(gridPos, isEven ? _darkCellColor : _lightCellColor);
                 
                 _gridCells[gridPos] = cellComp;
             }
@@ -105,23 +104,7 @@ public class GridManager : MonoBehaviour
         cellObj.transform.localScale = cellObj.transform.localScale * uniformScale;
     }
 
-    /// <summary>
-    /// Đổi màu tất cả Renderer con của cell (Material).
-    /// Dùng MaterialPropertyBlock để tránh tạo instance material mới gây rác.
-    /// </summary>
-    private void ApplyCellColor(GameObject cellObj, Color color)
-    {
-        Renderer[] renderers = cellObj.GetComponentsInChildren<Renderer>();
-        MaterialPropertyBlock block = new MaterialPropertyBlock();
-        
-        foreach (var rend in renderers)
-        {
-            rend.GetPropertyBlock(block);
-            block.SetColor("_Color", color);     // Standard shader
-            block.SetColor("_BaseColor", color);  // URP/HDRP shader
-            rend.SetPropertyBlock(block);
-        }
-    }
+    /// (Hàm ApplyCellColor đã bị xóa do GridCell tự quản lý màu sắc)
 
     private void ClearGrid()
     {
