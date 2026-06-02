@@ -106,5 +106,5 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
 # Ignore Hierarchy Designer
-/[Aa]ssets/Hierarchy Designer/
-/[Aa]ssets/Hierarchy Designer.meta
+# /[Aa]ssets/Hierarchy Designer/
+# /[Aa]ssets/Hierarchy Designer.meta
