@@ -20,7 +20,8 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private float _maxPitch = 2f;
     [SerializeField] private float _comboResetDelay = 1.5f; // Nếu 1.5s không có tiếng nổ thì reset cao độ
 
-    private AudioSource _audioSource;
+    private AudioSource _sfxSource;
+    private AudioSource _pitchSource; // Source riêng để đổi Pitch không ảnh hưởng SFX khác
     private float _lastExplosionTime;
     private int _comboCount;
 
@@ -33,12 +34,14 @@ public class AudioManager : MonoBehaviour
         }
         Instance = this;
         
-        _audioSource = GetComponent<AudioSource>();
+        _sfxSource = GetComponent<AudioSource>();
+        _pitchSource = gameObject.AddComponent<AudioSource>();
+        _pitchSource.playOnAwake = false;
     }
 
     public void PlayExplosionSound()
     {
-        if (_explosionClip == null || _audioSource == null) return;
+        if (_explosionClip == null || _pitchSource == null) return;
 
         // Nếu khoảng thời gian giữa 2 lần nổ quá lâu -> Reset combo
         if (Time.time - _lastExplosionTime > _comboResetDelay)
@@ -51,25 +54,28 @@ public class AudioManager : MonoBehaviour
 
         // Tính toán Pitch: Càng combo nhiều âm thanh càng "tít" lên cao
         float currentPitch = Mathf.Min(_basePitch + (_comboCount - 1) * _pitchIncrement, _maxPitch);
-        _audioSource.pitch = currentPitch;
+        _pitchSource.pitch = currentPitch;
 
-        // Phát âm thanh
-        _audioSource.PlayOneShot(_explosionClip, _baseVolume);
+        // Phát âm thanh trên Source riêng
+        _pitchSource.PlayOneShot(_explosionClip, _baseVolume);
     }
 
     public void PlayPlaceSound()
     {
-        if (_placeClip != null && _audioSource != null)
+        // Yêu cầu: Khi người chơi đặt đĩa mới, âm thanh combo phải được đặt về ban đầu
+        _comboCount = 0;
+
+        if (_placeClip != null && _sfxSource != null)
         {
-            _audioSource.PlayOneShot(_placeClip, _baseVolume);
+            _sfxSource.PlayOneShot(_placeClip, _baseVolume);
         }
     }
 
     public void PlayErrorSound()
     {
-        if (_errorClip != null && _audioSource != null)
+        if (_errorClip != null && _sfxSource != null)
         {
-            _audioSource.PlayOneShot(_errorClip, _baseVolume);
+            _sfxSource.PlayOneShot(_errorClip, _baseVolume);
         }
     }
 }

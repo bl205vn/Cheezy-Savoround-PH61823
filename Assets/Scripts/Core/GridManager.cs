@@ -348,6 +348,9 @@ public class GridManager : MonoBehaviour
                 if (centerPlate.Priority != 9)
                 {
                     ExplodePlate(centerCell);
+                    // Tăng thời gian chờ lên 0.4s để hiệu ứng nổ chuỗi hiện rõ ràng hơn (ko bị dính chùm)
+                    BezierTween.Instance.StartTween(centerCell.transform, centerCell.transform.position, arcHeight: 0, duration: 20f);
+                    return true;
                 }
             }
             return ProcessNextMerge();
@@ -382,9 +385,18 @@ public class GridManager : MonoBehaviour
             // Tính điểm chọn "thùng rác" tốt nhất theo ý người dùng
             int score = 0;
             int countOnNeighbor = neighborPlate.GetCountOf(pushType);
-            if (countOnNeighbor > 0)
+            
+            if (countOnNeighbor == 5)
             {
-                score = countOnNeighbor; // Ưu tiên đĩa đã có loại bánh này, số càng nhỏ càng ưu tiên
+                // Cực kỳ ưu tiên: Xả miếng này vào là đủ 6/6 tinh khiết -> Nổ luôn!
+                score = -100;
+            }
+            else if (countOnNeighbor > 0)
+            {
+                // Ưu tiên đĩa đang có NHIỀU bánh cùng loại hơn (để gom lại cho nhanh nổ)
+                // Số càng nhỏ càng ưu tiên -> lấy 10 trừ đi
+                // VD: Có 4 miếng -> score = 6. Có 1 miếng -> score = 9.
+                score = 10 - countOnNeighbor; 
             }
             else
             {
