@@ -109,6 +109,7 @@ public class InputManager : MonoBehaviour
             {
                 // Snap vào ô lưới
                 cell.PlacePlate(_draggedPlate);
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayPlaceSound();
                 OnPlatePlaced?.Invoke(_draggedPlate, cell);
                 _draggedPlate = null;
                 return; // Thành công
@@ -117,6 +118,7 @@ public class InputManager : MonoBehaviour
 
         // Không tìm thấy ô hoặc ô đã có đĩa -> trả về chỗ cũ
         _draggedPlate.ReturnToOriginalSlot();
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayErrorSound();
         _draggedPlate = null;
     }
 }

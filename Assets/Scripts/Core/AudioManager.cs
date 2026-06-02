@@ -6,8 +6,12 @@ public class AudioManager : MonoBehaviour
     public static AudioManager Instance { get; private set; }
 
     [Header("Audio Settings")]
-    [Tooltip("Kéo file nhạc (VD: cinematic-boom.mp3) vào đây")]
+    [Tooltip("Tiếng nổ đĩa (VD: cinematic-boom.mp3)")]
     [SerializeField] private AudioClip _explosionClip;
+    [Tooltip("Tiếng đặt đĩa thành công (VD: placing-small-ceramic)")]
+    [SerializeField] private AudioClip _placeClip;
+    [Tooltip("Tiếng báo lỗi đặt sai ô (VD: wrong)")]
+    [SerializeField] private AudioClip _errorClip;
     [SerializeField] private float _baseVolume = 1f;
 
     [Header("Pitch Shift (Hiệu ứng Combo)")]
@@ -51,5 +55,21 @@ public class AudioManager : MonoBehaviour
 
         // Phát âm thanh
         _audioSource.PlayOneShot(_explosionClip, _baseVolume);
+    }
+
+    public void PlayPlaceSound()
+    {
+        if (_placeClip != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_placeClip, _baseVolume);
+        }
+    }
+
+    public void PlayErrorSound()
+    {
+        if (_errorClip != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_errorClip, _baseVolume);
+        }
     }
 }
