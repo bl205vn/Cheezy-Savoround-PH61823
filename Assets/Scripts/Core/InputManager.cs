@@ -5,8 +5,26 @@ public class InputManager : MonoBehaviour
 {
     private Camera _mainCamera;
     private PizzaPlate _draggedPlate;
+    private GridCell _lastHighlightedCell;
     private Plane _dragPlane;
-    private float _dragHeight = 1.0f; // Độ cao của đĩa khi kéo
+    [SerializeField] private float _dragHeight = 1.0f; // Độ cao của đĩa khi kéo
+    [SerializeField] private LayerMask _gridLayerMask = Physics.DefaultRaycastLayers;
+    [Header("Ghost Preview")]
+    [SerializeField] private GhostPreview _ghostPreview;
+
+    private const float DEBUG_RAY_LENGTH = 5f;
+    private const float DEBUG_RAY_DURATION = 2f;
+
+    private readonly RaycastHit[] _hitBuffer = new RaycastHit[10];
+
+    private struct HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>
+    {
+        public int Compare(RaycastHit x, RaycastHit y)
+        {
+            return x.distance.CompareTo(y.distance);
+        }
+    }
+    private readonly HitDistanceComparer _hitComparer = new HitDistanceComparer();
 
     public static event Action<PizzaPlate, GridCell> OnPlatePlaced;
 
@@ -15,6 +33,16 @@ public class InputManager : MonoBehaviour
         _mainCamera = Camera.main;
         // Mặt phẳng dùng để kéo thả (nằm ngang y = dragHeight)
         _dragPlane = new Plane(Vector3.up, new Vector3(0, _dragHeight, 0));
+
+        // Tự động Instantiate Ghost Preview nếu người dùng kéo Prefab từ Project vào
+        if (_ghostPreview != null)
+        {
+            if (_ghostPreview.gameObject.scene != this.gameObject.scene)
+            {
+                _ghostPreview = Instantiate(_ghostPreview);
+            }
+            _ghostPreview.Hide();
+        }
     }
 
     private void Update()
@@ -24,6 +52,13 @@ public class InputManager : MonoBehaviour
 
     private void HandleInput()
     {
+        // FSM Lock: Chỉ cho phép tương tác khi đang ở trạng thái PlayingState
+        if (GameStateManager.Instance != null && 
+            GameStateManager.Instance.CurrentState != GameStateManager.Instance.Playing)
+        {
+            return;
+        }
+
         if (Input.GetMouseButtonDown(0))
         {
             TryPickUpPlate();
@@ -45,8 +80,12 @@ public class InputManager : MonoBehaviour
         {
             if (hit.collider.TryGetComponent(out PizzaPlate plate))
             {
-                _draggedPlate = plate;
-                _draggedPlate.PickUp();
+                // Chỉ cho phép bốc đĩa từ khay VÀ đĩa đó không phải đang bay về khay
+                if (TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate) && !plate.IsReturning)
+                {
+                    _draggedPlate = plate;
+                    _draggedPlate.PickUp();
+                }
             }
         }
     }
@@ -60,26 +99,74 @@ public class InputManager : MonoBehaviour
             _draggedPlate.DragTo(worldPos);
 
             // Vẽ gizmo (Debug Ray) màu cam đậm hướng xuống dưới khi đang kéo
-            Debug.DrawRay(_draggedPlate.transform.position, Vector3.down * 5f, new Color(1.0f, 0.5f, 0.0f));
+            Debug.DrawRay(_draggedPlate.transform.position, Vector3.down * DEBUG_RAY_LENGTH, new Color(1.0f, 0.5f, 0.0f));
+            
+            // Xử lý Highlight ô lưới bên dưới
+            Ray downwardRay = new Ray(_draggedPlate.transform.position, Vector3.down);
+            int hitCount = Physics.RaycastNonAlloc(downwardRay, _hitBuffer, 100f, _gridLayerMask);
+            Array.Sort(_hitBuffer, 0, hitCount, _hitComparer);
+
+            GridCell currentTargetCell = null;
+            for (int i = 0; i < hitCount; i++)
+            {
+                var hit = _hitBuffer[i];
+                if (hit.collider.TryGetComponent(out GridCell cell) && !cell.IsOccupied)
+                {
+                    currentTargetCell = cell;
+                    break;
+                }
+            }
+
+            // Xử lý hiển thị bóng mờ (Ghost Plate) snap vào tâm ô lưới
+            if (currentTargetCell != null)
+            {
+                if (_ghostPreview != null)
+                {
+                    // Lấy đúng scale gốc của đĩa (khi đang nằm trên mâm/bàn) để gán cho Ghost
+                    _ghostPreview.transform.localScale = _draggedPlate.BaseScale;
+                    _ghostPreview.ShowAt(currentTargetCell.GetDropPosition());
+                }
+            }
+            else
+            {
+                if (_ghostPreview != null)
+                {
+                    _ghostPreview.Hide();
+                }
+            }
+
+            _lastHighlightedCell = currentTargetCell;
         }
     }
 
     private void TryDropPlate()
     {
+        // Ẩn bóng mờ khi thả đĩa
+        if (_ghostPreview != null)
+        {
+            _ghostPreview.Hide();
+        }
+
+        _lastHighlightedCell = null;
+
         // Bắn tia từ đĩa xuống dưới để tìm lưới
         Ray ray = new Ray(_draggedPlate.transform.position, Vector3.down);
         
         // Vẽ gizmo (Debug Ray) màu cam đậm lưu lại 2 giây để dễ quan sát khi nhả chuột
-        Debug.DrawRay(ray.origin, ray.direction * 5f, new Color(1.0f, 0.5f, 0.0f), 2f);
+        Debug.DrawRay(ray.origin, ray.direction * DEBUG_RAY_LENGTH, new Color(1.0f, 0.5f, 0.0f), DEBUG_RAY_DURATION);
 
-        // Dùng RaycastAll để tia có thể đi xuyên qua đĩa đang cản đường (nếu đĩa cũ có collider to che mất)
-        RaycastHit[] hits = Physics.RaycastAll(ray);
-        foreach (var hit in hits)
+        // Dùng RaycastNonAlloc để tránh GC Alloc mỗi lần thả đĩa
+        int hitCount = Physics.RaycastNonAlloc(ray, _hitBuffer, 100f, _gridLayerMask);
+        Array.Sort(_hitBuffer, 0, hitCount, _hitComparer);
+
+        for (int i = 0; i < hitCount; i++)
         {
+            var hit = _hitBuffer[i];
             if (hit.collider.TryGetComponent(out GridCell cell) && !cell.IsOccupied)
             {
                 // Snap vào ô lưới
                 cell.PlacePlate(_draggedPlate);
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayPlaceSound();
                 OnPlatePlaced?.Invoke(_draggedPlate, cell);
                 _draggedPlate = null;
                 return; // Thành công
@@ -87,7 +174,8 @@ public class InputManager : MonoBehaviour
         }
 
         // Không tìm thấy ô hoặc ô đã có đĩa -> trả về chỗ cũ
-        _draggedPlate.ReturnToOriginalSlot();
+        _draggedPlate.PlayShakeAndReturn();
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayErrorSound();
         _draggedPlate = null;
     }
 }

@@ -2,11 +2,16 @@ using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
+    public static LevelData CurrentLevelData { get; private set; }
+
     [SerializeField] private GridManager _gridManager;
     [SerializeField] private TrayManager _trayManager;
     
     [Header("Testing")]
     [SerializeField] private TextAsset _testLevelJson; // Kéo file JSON vào đây để test trực tiếp
+    
+    [Header("Debug")]
+    [SerializeField] private bool _showDebugGizmos = false; // Tích để hiện đường Gizmo trong Scene
 
     private void Start()
     {
@@ -36,6 +41,14 @@ public class LevelManager : MonoBehaviour
         LevelData data = JsonUtility.FromJson<LevelData>(jsonFile.text);
         if (data == null) return;
         
+        CurrentLevelData = data; // Cache data cho các class khác sử dụng (Data-Driven)
+
+        // Khởi tạo Pool động dựa trên LevelData
+        if (ObjectPoolManager.Instance != null)
+        {
+            ObjectPoolManager.Instance.InitializePool(data.gridWidth, data.gridHeight, data.holdSlotCount, data.maxSlices);
+        }
+
         if (_gridManager != null)
         {
             _gridManager.GenerateGrid(data.levelId, data.gridWidth, data.gridHeight);
@@ -50,6 +63,8 @@ public class LevelManager : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
+        if (!_showDebugGizmos) return;
+        
         // Preview level trong Editor mà không cần Play
         if (_testLevelJson != null && _gridManager != null && _trayManager != null)
         {
