@@ -299,7 +299,7 @@ public class GridManager : MonoBehaviour
                     bool canPull = false;
                     if (centerPlate.Priority > neighborPlate.Priority) canPull = true;
                     else if (centerPlate.Priority < neighborPlate.Priority) canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
-                    else canPull = centerPlate.GetCountOf(targetPullType) >= neighborPlate.GetCountOf(targetPullType);
+                    else canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
 
                     if (canPull)
                     {

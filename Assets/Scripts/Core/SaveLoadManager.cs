@@ -1,0 +1,84 @@
+using UnityEngine;
+using System.IO;
+
+public static class SaveLoadManager
+{
+    public static PlayerData Data { get; private set; }
+
+    private static string _saveFilePath;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    public static void Initialize()
+    {
+        _saveFilePath = Path.Combine(Application.persistentDataPath, "playerdata.json");
+        Load();
+    }
+
+    /// <summary>
+    /// Đọc dữ liệu từ file JSON vào bộ nhớ. Nếu chưa có file sẽ tạo mới.
+    /// </summary>
+    public static void Load()
+    {
+        if (File.Exists(_saveFilePath))
+        {
+            try
+            {
+                string json = File.ReadAllText(_saveFilePath);
+                Data = JsonUtility.FromJson<PlayerData>(json);
+                Debug.Log($"[SaveLoadManager] Load data success: {_saveFilePath}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[SaveLoadManager] Load error: {e.Message}. Creating new default data.");
+                ResetData();
+            }
+        }
+        else
+        {
+            ResetData();
+        }
+
+        // Validate essential fields in case of corrupted/old saves
+        if (Data.UnlockedSkins == null || Data.UnlockedSkins.Count == 0)
+        {
+            Data.UnlockedSkins = new System.Collections.Generic.List<string>() { "default_plate" };
+        }
+        if (string.IsNullOrEmpty(Data.CurrentSkinId))
+        {
+            Data.CurrentSkinId = "default_plate";
+        }
+        if (Data.Settings == null)
+        {
+            Data.Settings = new GameSettings();
+        }
+    }
+
+    /// <summary>
+    /// Ghi dữ liệu hiện tại xuống file JSON.
+    /// </summary>
+    public static void Save()
+    {
+        if (Data == null) return;
+        
+        try
+        {
+            string json = JsonUtility.ToJson(Data, true); // true for pretty print
+            File.WriteAllText(_saveFilePath, json);
+            Debug.Log("[SaveLoadManager] Save data success.");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[SaveLoadManager] Save error: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Khôi phục toàn bộ dữ liệu về trạng thái ban đầu.
+    /// </summary>
+    public static void ResetData()
+    {
+        Data = new PlayerData();
+        Save();
+        Debug.Log("[SaveLoadManager] Reset to default data.");
+    }
+}
