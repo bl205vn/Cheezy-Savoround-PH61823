@@ -296,7 +296,7 @@ public class GridManager : MonoBehaviour
                     bool canPull = false;
                     if (centerPlate.Priority > neighborPlate.Priority) canPull = true;
                     else if (centerPlate.Priority < neighborPlate.Priority) canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
-                    else canPull = centerPlate.GetCountOf(targetPullType) >= neighborPlate.GetCountOf(targetPullType);
+                    else canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
 
                     if (canPull)
                     {
@@ -478,34 +478,122 @@ public class GridManager : MonoBehaviour
                 EnqueueCell(neighbor);
             }
         }
+
+        // MỚI: Tìm hàng xóm priority cao nhất → tâm chấn mới
+        GridCell newEpicenter = null;
+        int highestPriority = -1;
+        foreach (var dir in _directions)
+        {
+            GridCell neighbor = GetCell(cell.GridPosition + dir);
+            if (neighbor != null && neighbor.IsOccupied)
+            {
+                if (neighbor.CurrentPlate.Priority > highestPriority)
+                {
+                    highestPriority = neighbor.CurrentPlate.Priority;
+                    newEpicenter = neighbor;
+                }
+            }
+        }
+
+        if (newEpicenter != null)
+        {
+            CalculateLocalPriorities(newEpicenter); // BFS cục bộ, không reset toàn lưới
+        }
+    }
+
+    /// <summary>
+    /// BFS cục bộ: gán priority lan tỏa từ tâm chấn mới.
+    /// Chỉ NÂNG priority (không hạ), nên không phá vỡ các đĩa đang chờ trong queue.
+    /// </summary>
+    private void CalculateLocalPriorities(GridCell epicenter)
+    {
+        if (epicenter == null || !epicenter.IsOccupied) return;
+
+        // Gán tâm chấn mới = 9
+        epicenter.CurrentPlate.Priority = 9;
+
+        // BFS lan tỏa từ tâm chấn mới
+        Queue<GridCell> bfsQueue = new Queue<GridCell>();
+        HashSet<GridCell> visited = new HashSet<GridCell>();
+
+        bfsQueue.Enqueue(epicenter);
+        visited.Add(epicenter);
+
+        while (bfsQueue.Count > 0)
+        {
+            GridCell current = bfsQueue.Dequeue();
+            int currentPrio = current.CurrentPlate.Priority;
+
+            foreach (var dir in _directions)
+            {
+                GridCell neighbor = GetCell(current.GridPosition + dir);
+                if (neighbor == null || !neighbor.IsOccupied) continue;
+                if (visited.Contains(neighbor)) continue;
+
+                int newPrio = Mathf.Max(0, currentPrio - 1);
+
+                // Chỉ cập nhật nếu priority mới CAO HƠN priority hiện tại
+                // → không phá vỡ các đĩa đang chờ trong queue
+                if (newPrio > neighbor.CurrentPlate.Priority)
+                {
+                    neighbor.CurrentPlate.Priority = newPrio;
+                    visited.Add(neighbor);
+                    if (newPrio > 0) bfsQueue.Enqueue(neighbor);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra đĩa Priority 9 trống có được phép xóa chưa.
+    /// Chỉ cho xóa khi tất cả hàng xóm đã ổn định (trống, hoặc tinh khiết đầy).
+    /// </summary>
+    private bool CanRemovePrivilegedPlate(GridCell cell)
+    {
+        foreach (var dir in _directions)
+        {
+            GridCell neighbor = GetCell(cell.GridPosition + dir);
+            if (neighbor == null || !neighbor.IsOccupied) continue;
+
+            PizzaPlate neighborPlate = neighbor.CurrentPlate;
+
+            // Còn hàng xóm chưa tinh khiết VÀ còn miếng bánh → chưa được xóa
+            if (neighborPlate.GetTotalSlices() > 0 && !neighborPlate.IsFullAndPure())
+                return false;
+        }
+        return true;
     }
 
     public bool CleanupPrivilegedPlates()
     {
-        bool anyExploded = false;
+        bool anyRemoved = false;
         foreach (var kvp in _gridCells)
         {
             GridCell cell = kvp.Value;
-            if (cell.IsOccupied)
+            if (!cell.IsOccupied) continue;
+
+            PizzaPlate plate = cell.CurrentPlate;
+            if (plate.Priority == 9 && plate.GetTotalSlices() == 0)
             {
-                PizzaPlate plate = cell.CurrentPlate;
-                
-                if (plate.Priority == 9)
+                // Chỉ xóa khi hàng xóm không còn di chuyển hợp lệ
+                if (CanRemovePrivilegedPlate(cell))
                 {
-                    if (plate.GetTotalSlices() == 0)
-                    {
-                        plate.PlayShrinkAndReturn();
-                        cell.ClearPlate();
-                    }
+                    plate.PlayShrinkAndReturn();
+                    cell.ClearPlate();
+                    anyRemoved = true; // ← Gán true để cascade tiếp tục
                 }
-                
-                if (cell.IsOccupied)
+                else
                 {
-                    cell.CurrentPlate.Priority = 0;
+                    // Chưa được xóa → reset priority để không cản trở hàng xóm
+                    plate.Priority = 0;
                 }
             }
+            else if (cell.IsOccupied)
+            {
+                cell.CurrentPlate.Priority = 0;
+            }
         }
-        return anyExploded;
+        return anyRemoved;
     }
 
 #if UNITY_EDITOR
