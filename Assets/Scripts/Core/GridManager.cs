@@ -17,6 +17,9 @@ public class GridManager : MonoBehaviour
     private List<GridCell> _cellsToProcess = new List<GridCell>();
     private HashSet<GridCell> _cellsInQueue = new HashSet<GridCell>();
     private int _mergeSequenceCount = 0; // Đếm số lần merge liên tiếp để tăng tốc độ bay
+    
+    // Cache buffer để tránh GC alloc trong gameplay loop
+    private readonly List<int> _gameOverTypeBuffer = new List<int>();
 
     private void EnqueueCell(GridCell cell)
     {
@@ -296,7 +299,7 @@ public class GridManager : MonoBehaviour
                     bool canPull = false;
                     if (centerPlate.Priority > neighborPlate.Priority) canPull = true;
                     else if (centerPlate.Priority < neighborPlate.Priority) canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
-                    else canPull = centerPlate.GetCountOf(targetPullType) > neighborPlate.GetCountOf(targetPullType);
+                    else canPull = centerPlate.GetCountOf(targetPullType) >= neighborPlate.GetCountOf(targetPullType);
 
                     if (canPull)
                     {
@@ -594,6 +597,44 @@ public class GridManager : MonoBehaviour
             }
         }
         return anyRemoved;
+    }
+
+    public bool CheckGameOver()
+    {
+        // Điều kiện 1: Lưới phải đầy hết
+        foreach (var kvp in _gridCells)
+        {
+            if (!kvp.Value.IsOccupied) return false;
+        }
+
+        // Điều kiện 2: Không còn nước merge hợp lệ
+        foreach (var kvp in _gridCells)
+        {
+            GridCell cell = kvp.Value;
+            if (!cell.IsOccupied) continue;
+
+            PizzaPlate plateA = cell.CurrentPlate;
+            if (plateA.IsFull()) continue;
+
+            foreach (var dir in _directions)
+            {
+                GridCell neighbor = GetCell(cell.GridPosition + dir);
+                if (neighbor == null || !neighbor.IsOccupied) continue;
+
+                PizzaPlate plateB = neighbor.CurrentPlate;
+
+                // Dùng buffer cache thay vì tạo List mới → Zero GC
+                _gameOverTypeBuffer.Clear();
+                _gameOverTypeBuffer.AddRange(plateA.GetAvailableTypes());
+
+                foreach (int t in _gameOverTypeBuffer)
+                {
+                    if (plateB.HasType(t)) return false; // Còn nước đi
+                }
+            }
+        }
+
+        return true;
     }
 
 #if UNITY_EDITOR

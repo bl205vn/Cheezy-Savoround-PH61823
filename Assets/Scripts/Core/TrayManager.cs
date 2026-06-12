@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,6 +8,8 @@ public class TrayManager : MonoBehaviour
 
     [SerializeField] private float _slotSpacing; // Khoảng cách giữa các slot
     [SerializeField] private GameObject _pizzaPlatePrefab; // Prefab đĩa pizza
+
+    public static event Action OnRefillComplete;
 
     // Lưu trữ các slot anchor (empty GO) để quản lý vòng đời
     private readonly List<GameObject> _slotAnchors = new List<GameObject>();
@@ -49,13 +52,9 @@ public class TrayManager : MonoBehaviour
             if (_slotPlates[i] == plate)
             {
                 _slotPlates[i] = null;
+                _pendingRefill = true; // Bật cờ refill ngay khi có 1 slot trống
                 break;
             }
-        }
-
-        if (IsAllSlotsEmpty())
-        {
-            _pendingRefill = true;
         }
     }
 
@@ -174,6 +173,11 @@ public class TrayManager : MonoBehaviour
         }
 
         Debug.Log($"[TrayManager] Refill: Sinh {refillCount} đĩa mới trên khay.");
+        
+        if (refillCount > 0)
+        {
+            OnRefillComplete?.Invoke();
+        }
     }
 
     /// <summary>

@@ -19,6 +19,12 @@ public class GameStateManager : MonoBehaviour
     /// </summary>
     public static event Action<IGameState> OnStateChanged;
 
+    /// <summary>
+    /// Observer Event: Phát khi game kết thúc.
+    /// UI/Audio lắng nghe để hiển thị Game Over.
+    /// </summary>
+    public static event Action OnGameOver;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -33,6 +39,24 @@ public class GameStateManager : MonoBehaviour
         Animating = new AnimatingState();
         CheckingCombo = new CheckingComboState();
         GameOver = new GameOverState();
+    }
+
+    private void OnEnable()
+    {
+        TrayManager.OnRefillComplete += CheckAndTriggerGameOver;
+    }
+
+    private void OnDisable()
+    {
+        TrayManager.OnRefillComplete -= CheckAndTriggerGameOver;
+    }
+
+    private void CheckAndTriggerGameOver()
+    {
+        if (GridManager.Instance != null && GridManager.Instance.CheckGameOver())
+        {
+            TriggerGameOver();
+        }
     }
 
     private void Start()
@@ -59,5 +83,11 @@ public class GameStateManager : MonoBehaviour
         OnStateChanged?.Invoke(newState);
         
         Debug.Log($"[FSM] Changed State to: {newState.GetType().Name}");
+    }
+
+    public void TriggerGameOver()
+    {
+        ChangeState(GameOver);
+        OnGameOver?.Invoke();
     }
 }
