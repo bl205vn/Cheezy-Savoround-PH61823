@@ -41,11 +41,11 @@ public static class SaveLoadManager
         // Validate essential fields in case of corrupted/old saves
         if (Data.UnlockedSkins == null || Data.UnlockedSkins.Count == 0)
         {
-            Data.UnlockedSkins = new System.Collections.Generic.List<string>() { "default_plate" };
+            Data.UnlockedSkins = new System.Collections.Generic.List<string>() { "plate_01" };
         }
         if (string.IsNullOrEmpty(Data.CurrentSkinId))
         {
-            Data.CurrentSkinId = "default_plate";
+            Data.CurrentSkinId = "plate_01";
         }
         if (Data.Settings == null)
         {

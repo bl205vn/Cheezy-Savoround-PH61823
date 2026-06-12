@@ -32,6 +32,11 @@ public class PizzaPlate : MonoBehaviour
     // --- ZERO GC BUFFERS ---
     private readonly System.Collections.Generic.Dictionary<int, int> _typeCountBuffer = new System.Collections.Generic.Dictionary<int, int>();
     private readonly System.Collections.Generic.List<int> _availableTypesBuffer = new System.Collections.Generic.List<int>();
+    
+    // Static buffer cho MaterialPropertyBlock để tái sử dụng toàn cục, tuân thủ Zero-GC
+    private static MaterialPropertyBlock _propBlock;
+    private static ShopConfig _shopConfig;
+    private Renderer _plateRenderer;
     public void Initialize(Transform parentSlot)
     {
         _originalParent = parentSlot;
@@ -39,6 +44,48 @@ public class PizzaPlate : MonoBehaviour
         transform.localPosition = new Vector3(0, _spawnHeight, 0); // Sinh cách khoảng y
         _originalPosition = transform.position;
         _baseScale = transform.localScale; // Cập nhật scale gốc để dùng cho các logic UI/Ghost
+        
+        ApplyCurrentSkin();
+    }
+
+    private void ApplyCurrentSkin()
+    {
+        if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
+        if (_shopConfig == null) 
+        {
+            // Sửa lại đường dẫn do file nằm trong thư mục Resources/Shop
+            _shopConfig = Resources.Load<ShopConfig>("Shop/ShopConfig");
+            if (_shopConfig == null) Debug.LogError("[PizzaPlate] KHÔNG TÌM THẤY ShopConfig! Hãy kiểm tra lại tên file và đường dẫn.");
+        }
+        
+        if (_plateRenderer == null)
+        {
+            _plateRenderer = GetComponentInChildren<Renderer>();
+            if (_plateRenderer == null) Debug.LogError("[PizzaPlate] Không tìm thấy Renderer trên Prefab đĩa!");
+        }
+
+        if (_shopConfig != null && _plateRenderer != null && SaveLoadManager.Data != null)
+        {
+            string skinId = SaveLoadManager.Data.CurrentSkinId;
+            SkinData currentSkin = _shopConfig.GetSkin(skinId);
+            
+            if (currentSkin != null && currentSkin.Texture != null)
+            {
+                _plateRenderer.GetPropertyBlock(_propBlock);
+                
+                _propBlock.SetTexture("Main_Texture", currentSkin.Texture);
+                _propBlock.SetTexture("_Main_Texture", currentSkin.Texture);
+                _propBlock.SetTexture("_BaseMap", currentSkin.Texture);
+                _propBlock.SetTexture("_MainTex", currentSkin.Texture);
+                
+                _plateRenderer.SetPropertyBlock(_propBlock);
+                Debug.Log($"[PizzaPlate] Đã áp dụng skin: {skinId} thành công lên đĩa!");
+            }
+            else
+            {
+                Debug.LogError($"[PizzaPlate] Lỗi: Không tìm thấy SkinData cho ID '{skinId}' trong ShopConfig hoặc Texture bị trống.");
+            }
+        }
     }
 
     public void PickUp()

@@ -15,8 +15,8 @@ public class PlayerData
     public PlayerData()
     {
         Gold = 0;
-        UnlockedSkins = new List<string>() { "default_plate" };
-        CurrentSkinId = "default_plate";
+        UnlockedSkins = new List<string>() { "plate_01", "plate_02", "plate_03", "plate_04", "plate_05", "plate_06" };
+        CurrentSkinId = "plate_01";
         LastDailyRewardTime = 0;
         Achievements = new List<AchievementSaveData>();
         Settings = new GameSettings();
