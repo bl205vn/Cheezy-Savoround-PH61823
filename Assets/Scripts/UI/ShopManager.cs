@@ -39,8 +39,9 @@ public class ShopManager : MonoBehaviour
     [Header("3D Skin Preview")]
     [SerializeField] private ShopConfig _shopConfig;          // Kéo ShopConfig trong Resources vào đây
     [SerializeField] private PizzaPlate _platePrefab;         // Kéo Prefab PizzaPlate vào đây
-    [SerializeField] private RectTransform _modelSpawnPoint;  // Tạo 1 GameObject trống nằm trong Nền lót, kéo vào đây
-    [SerializeField] private float _modelScale = 45f;         // Tùy chỉnh độ lớn của đĩa 3D trong Shop
+    [SerializeField] private Transform _modelSpawnPoint;      // Tạo 1 GameObject trống đặt TRƯỚC mặt Camera Preview (cách khoảng Z=5), kéo vào đây
+    [SerializeField] private float _modelScale;         // Tùy chỉnh độ lớn của đĩa 3D trong Shop
+    [SerializeField] private float _modelRotationSpeed; // Tốc độ xoay của đĩa 3D
 
     [Header("Action UI (Nút Mua/Trang bị)")]
     [SerializeField] private GameObject _buyButtonObj;        // Kéo cái Nút Xanh lá (chữ BUY) vào đây
@@ -57,7 +58,7 @@ public class ShopManager : MonoBehaviour
         // Xoay đĩa 3D nhẹ nhàng nếu đang mở tab Skin
         if (_previewPlate != null && _previewPlate.gameObject.activeInHierarchy)
         {
-            _previewPlate.transform.Rotate(Vector3.up * 30f * Time.deltaTime, Space.World);
+            _previewPlate.transform.Rotate(Vector3.up * _modelRotationSpeed * Time.deltaTime, Space.World);
         }
     }
 
@@ -113,7 +114,8 @@ public class ShopManager : MonoBehaviour
                 if (_previewPlate == null && _platePrefab != null && _modelSpawnPoint != null)
                 {
                     _previewPlate = Instantiate(_platePrefab, _modelSpawnPoint);
-                    _previewPlate.transform.localPosition = new Vector3(0, 0, -100f); // Kéo lên trước UI
+                    _previewPlate.transform.localPosition = Vector3.zero; // Sinh ra đúng ngay vị trí của Spawn Point
+                    _previewPlate.transform.localRotation = Quaternion.Euler(25f, 0, 0); // Nghiêng đĩa xuống 25 độ để thấy mặt trên
                     _previewPlate.transform.localScale = Vector3.one * _modelScale;
                     
                     // Xóa các component vật lý không cần thiết trong UI (tránh va chạm ngoài ý muốn)
@@ -122,9 +124,6 @@ public class ShopManager : MonoBehaviour
                     
                     var rb = _previewPlate.GetComponent<Rigidbody>();
                     if (rb != null) Destroy(rb);
-                    
-                    // Đổi Layer của toàn bộ đĩa sang UI để hiển thị cùng Canvas
-                    SetLayerRecursively(_previewPlate.gameObject, LayerMask.NameToLayer("UI"));
                 }
 
                 if (_previewPlate != null) _previewPlate.gameObject.SetActive(true);
@@ -344,15 +343,7 @@ public class ShopManager : MonoBehaviour
         }
     }
 
-    private void SetLayerRecursively(GameObject obj, int newLayer)
-    {
-        if (obj == null) return;
-        obj.layer = newLayer;
-        foreach (Transform child in obj.transform)
-        {
-            if (child != null) SetLayerRecursively(child.gameObject, newLayer);
-        }
-    }
+
 
     /// <summary>
     /// Gắn hàm này vào sự kiện OnClick của Button trên Bảng Giá
