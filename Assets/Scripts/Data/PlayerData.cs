@@ -10,6 +10,7 @@ public class PlayerData
     public long LastDailyRewardTime; // Lưu dưới dạng UTC Ticks
     public List<AchievementSaveData> Achievements;
     public GameSettings Settings;
+    public List<int> BoostersOwned; // Lưu số lượng của 4 loại Booster
     
     // Khởi tạo giá trị mặc định cho người chơi mới
     public PlayerData()
@@ -20,6 +21,7 @@ public class PlayerData
         LastDailyRewardTime = 0;
         Achievements = new List<AchievementSaveData>();
         Settings = new GameSettings();
+        BoostersOwned = new List<int>() { 0, 0, 0, 0 };
     }
 }
 

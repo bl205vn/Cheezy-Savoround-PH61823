@@ -80,4 +80,28 @@ public class UIManager : MonoBehaviour
             GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
         }
     }
+
+    /// <summary>
+    /// Được gọi bởi Button "Home" trong HUD (Góc trên bên trái)
+    /// </summary>
+    public void QuitToLobby()
+    {
+        // Bật lại sảnh chờ
+        ShowPanel(_starterPanel);
+
+        // Đổi background về sảnh
+        if (_lobbyBackground != null) _lobbyBackground.SetActive(true);
+        if (_inGameBackground != null) _inGameBackground.SetActive(false);
+
+        // Tắt HUD
+        if (_hudCanvas != null) _hudCanvas.SetActive(false);
+
+        // Chuyển FSM về sảnh
+        if (GameStateManager.Instance != null)
+        {
+            GameStateManager.Instance.ChangeState(GameStateManager.Instance.Lobby);
+        }
+        
+        // Ghi chú: Logic xóa lưới (Clear Grid/Tray) để reset màn chơi sẽ được bổ sung sau
+    }
 }
