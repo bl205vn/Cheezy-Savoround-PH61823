@@ -88,6 +88,23 @@ public class PizzaPlate : MonoBehaviour
         }
     }
 
+    public void ApplySkinDirectly(Texture2D texture)
+    {
+        if (texture == null) return;
+        if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
+        if (_plateRenderer == null) _plateRenderer = GetComponentInChildren<Renderer>();
+
+        if (_plateRenderer != null)
+        {
+            _plateRenderer.GetPropertyBlock(_propBlock);
+            _propBlock.SetTexture("Main_Texture", texture);
+            _propBlock.SetTexture("_Main_Texture", texture);
+            _propBlock.SetTexture("_BaseMap", texture);
+            _propBlock.SetTexture("_MainTex", texture);
+            _plateRenderer.SetPropertyBlock(_propBlock);
+        }
+    }
+
     public void PickUp()
     {
         transform.DOKill(); // Dừng mọi hiệu ứng (như đang bay về khay) nếu người chơi chộp lại đĩa giữa chừng
