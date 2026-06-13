@@ -75,6 +75,16 @@ public class InputManager : MonoBehaviour
 
     private void TryPickUpPlate()
     {
+        // Chặn tương tác nếu người chơi đang bấm vào UI (cả chuột và touch trên mobile)
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() ||
+                (Input.touchCount > 0 && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId)))
+            {
+                return;
+            }
+        }
+
         Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit))
         {

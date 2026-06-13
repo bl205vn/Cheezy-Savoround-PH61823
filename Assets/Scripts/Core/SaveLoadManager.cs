@@ -51,6 +51,9 @@ public static class SaveLoadManager
         {
             Data.Settings = new GameSettings();
         }
+
+        // Apply TargetFPS
+        Application.targetFrameRate = Data.Settings.TargetFPS;
     }
 
     /// <summary>

@@ -8,6 +8,7 @@ public class GameStateManager : MonoBehaviour
     public IGameState CurrentState { get; private set; }
 
     // Danh sách các trạng thái của game
+    public LobbyState Lobby { get; private set; }
     public PlayingState Playing { get; private set; }
     public AnimatingState Animating { get; private set; }
     public CheckingComboState CheckingCombo { get; private set; }
@@ -35,6 +36,7 @@ public class GameStateManager : MonoBehaviour
         Instance = this;
 
         // Khởi tạo các State class riêng biệt (Không dùng nested booleans)
+        Lobby = new LobbyState();
         Playing = new PlayingState();
         Animating = new AnimatingState();
         CheckingCombo = new CheckingComboState();
@@ -61,8 +63,8 @@ public class GameStateManager : MonoBehaviour
 
     private void Start()
     {
-        // Trạng thái mặc định khi bắt đầu game
-        ChangeState(Playing);
+        // Trạng thái mặc định khi bắt đầu game là Lobby (chờ người chơi nhấn Start)
+        ChangeState(Lobby);
     }
 
     private void Update()
