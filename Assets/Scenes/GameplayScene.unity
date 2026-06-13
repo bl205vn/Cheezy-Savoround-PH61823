@@ -5970,6 +5970,8 @@ MonoBehaviour:
   _platePrefab: {fileID: 3450514557728895164, guid: 525788b23425e3a45b463e3c339e1ddb, type: 3}
   _modelSpawnPoint: {fileID: 1272828518}
   _modelScale: 1
+  _modelRotationSpeed: 120
+  _modelTiltAngle: 60
   _buyButtonObj: {fileID: 1725471039}
   _equipBoardSprite: {fileID: 21300000, guid: 3c176054dd94a2e4f8721cf3a8b7e73e, type: 3}
   _priceText: {fileID: 1666618627}
@@ -5999,7 +6001,7 @@ Transform:
   m_GameObject: {fileID: 1272828517}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 5}
+  m_LocalPosition: {x: 0, y: -0.5, z: 5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

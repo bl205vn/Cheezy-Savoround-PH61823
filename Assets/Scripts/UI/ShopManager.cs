@@ -39,10 +39,10 @@ public class ShopManager : MonoBehaviour
     [Header("3D Skin Preview")]
     [SerializeField] private ShopConfig _shopConfig;          // Kéo ShopConfig trong Resources vào đây
     [SerializeField] private PizzaPlate _platePrefab;         // Kéo Prefab PizzaPlate vào đây
-    [SerializeField] private Transform _modelSpawnPoint;      // Tạo 1 GameObject trống đặt TRƯỚC mặt Camera Preview (cách khoảng Z=5), kéo vào đây
-    [SerializeField] private float _modelScale;         // Tùy chỉnh độ lớn của đĩa 3D trong Shop
-    [SerializeField] private float _modelRotationSpeed; // Tốc độ xoay của đĩa 3D
-
+    [SerializeField] private Transform _modelSpawnPoint;      // Tạo 1 GameObject trống đặt TRƯỚC mặt Camera Preview
+    [SerializeField] private float _modelScale;               // Độ lớn của đĩa 3D trong Shop
+    [SerializeField] private float _modelRotationSpeed;       // Tốc độ xoay của đĩa 3D
+    [SerializeField] private float _modelTiltAngle;           // Độ nghiêng của đĩa 3D (trục X) để dễ nhìn mặt đĩa
     [Header("Action UI (Nút Mua/Trang bị)")]
     [SerializeField] private GameObject _buyButtonObj;        // Kéo cái Nút Xanh lá (chữ BUY) vào đây
     [SerializeField] private Sprite _equipBoardSprite;        // Kéo khung gỗ trống (Asset 56) vào đây
@@ -115,7 +115,7 @@ public class ShopManager : MonoBehaviour
                 {
                     _previewPlate = Instantiate(_platePrefab, _modelSpawnPoint);
                     _previewPlate.transform.localPosition = Vector3.zero; // Sinh ra đúng ngay vị trí của Spawn Point
-                    _previewPlate.transform.localRotation = Quaternion.Euler(25f, 0, 0); // Nghiêng đĩa xuống 25 độ để thấy mặt trên
+                    _previewPlate.transform.localRotation = Quaternion.Euler(_modelTiltAngle, 0, 0); 
                     _previewPlate.transform.localScale = Vector3.one * _modelScale;
                     
                     // Xóa các component vật lý không cần thiết trong UI (tránh va chạm ngoài ý muốn)
