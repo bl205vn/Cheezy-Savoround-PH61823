@@ -49,6 +49,9 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _priceText;      // Text hiện giá tiền nằm trên khung gỗ
     [SerializeField] private TextMeshProUGUI _actionText;     // Text "CHỌN" / "ĐANG DÙNG" nằm trên khung gỗ
     
+    [Header("Top Bar UI")]
+    [SerializeField] private TextMeshProUGUI _goldText;       // Text hiện số dư Xu (Money)
+    
     private int _currentTabIndex = 0;
     private int _currentIndex = 0;
     private PizzaPlate _previewPlate;
@@ -64,6 +67,7 @@ public class ShopManager : MonoBehaviour
 
     private void OnEnable()
     {
+        UpdateGoldText(); // Cập nhật số xu hiển thị khi mở Shop
         // Mặc định chọn Tab 0 (Boost) khi mở Shop
         SwitchTab(0);
     }
@@ -198,6 +202,17 @@ public class ShopManager : MonoBehaviour
             _currentIndex = maxCount - 1; // Quay vòng về cuối
         }
         UpdateUI();
+    }
+
+    /// <summary>
+    /// Cập nhật hiển thị số dư Xu hiện tại
+    /// </summary>
+    public void UpdateGoldText()
+    {
+        if (_goldText != null && SaveLoadManager.Data != null)
+        {
+            _goldText.text = SaveLoadManager.Data.Gold.ToString();
+        }
     }
 
     /// <summary>
@@ -380,6 +395,7 @@ public class ShopManager : MonoBehaviour
                     
                     SaveLoadManager.Save();
                     UpdateActionUI();
+                    UpdateGoldText();
                     Debug.Log($"[Shop] Mua thành công skin: {skinData.Id}");
                 }
                 else
