@@ -43,8 +43,9 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private float _modelScale = 45f;         // Tùy chỉnh độ lớn của đĩa 3D trong Shop
 
     [Header("Action UI (Nút Mua/Trang bị)")]
-    [SerializeField] private TextMeshProUGUI _priceText;      // Text hiện giá tiền trên bảng giá
-    [SerializeField] private TextMeshProUGUI _actionText;     // Text chữ trạng thái (Vd: "MUA", "CHỌN", "ĐANG DÙNG")
+    [SerializeField] private Sprite _equipBoardSprite;        // Kéo khung gỗ trống (Asset 56) vào đây
+    [SerializeField] private TextMeshProUGUI _priceText;      // Text hiện giá tiền trên bảng giá (bật khi Mua)
+    [SerializeField] private TextMeshProUGUI _actionText;     // Text "CHỌN", "ĐANG DÙNG" (bật khi đã có Skin)
     
     private int _currentTabIndex = 0;
     private int _currentIndex = 0;
@@ -111,13 +112,18 @@ public class ShopManager : MonoBehaviour
                 if (_previewPlate == null && _platePrefab != null && _modelSpawnPoint != null)
                 {
                     _previewPlate = Instantiate(_platePrefab, _modelSpawnPoint);
-                    _previewPlate.transform.localScale = new Vector3(_modelScale, _modelScale, _modelScale);
-                    _previewPlate.transform.localPosition = new Vector3(0, -10f, -50f); // Kéo lùi lại để không bị Canvas che
-                    _previewPlate.transform.localRotation = Quaternion.Euler(15f, 0, 0); // Hơi nghiêng đĩa xuống để dễ nhìn
-
-                    // Tắt collider để tránh tương tác vật lý trong Shop
-                    var col = _previewPlate.GetComponent<Collider>();
-                    if (col != null) col.enabled = false;
+                    _previewPlate.transform.localPosition = new Vector3(0, 0, -100f); // Kéo lên trước UI
+                    _previewPlate.transform.localScale = Vector3.one * _modelScale;
+                    
+                    // Xóa các component vật lý không cần thiết trong UI (tránh va chạm ngoài ý muốn)
+                    var colliders = _previewPlate.GetComponentsInChildren<Collider>();
+                    foreach (var col in colliders) Destroy(col);
+                    
+                    var rb = _previewPlate.GetComponent<Rigidbody>();
+                    if (rb != null) Destroy(rb);
+                    
+                    // Đổi Layer của toàn bộ đĩa sang UI để hiển thị cùng Canvas
+                    SetLayerRecursively(_previewPlate.gameObject, LayerMask.NameToLayer("UI"));
                 }
 
                 if (_previewPlate != null) _previewPlate.gameObject.SetActive(true);
@@ -276,24 +282,53 @@ public class ShopManager : MonoBehaviour
             bool isOwned = SaveLoadManager.Data.UnlockedSkins.Contains(skinData.Id);
             bool isEquipped = SaveLoadManager.Data.CurrentSkinId == skinData.Id;
 
-            if (_priceText != null)
+            if (isOwned)
             {
-                // Ẩn giá nếu đã sở hữu
-                _priceText.text = isOwned ? "" : skinData.Price.ToString();
+                // Đã sở hữu: Chuyển bảng giá thành khung gỗ trống, ẩn text giá, hiện text CHỌN / ĐANG DÙNG
+                if (_equipBoardSprite != null) _priceBoardImage.sprite = _equipBoardSprite;
+                
+                if (_priceText != null) _priceText.gameObject.SetActive(false);
+                if (_actionText != null)
+                {
+                    _actionText.gameObject.SetActive(true);
+                    _actionText.text = isEquipped ? "ĐANG DÙNG" : "CHỌN";
+                }
             }
-
-            if (_actionText != null)
+            else
             {
-                if (isEquipped) _actionText.text = "ĐANG DÙNG";
-                else if (isOwned) _actionText.text = "CHỌN";
-                else _actionText.text = "MUA";
+                // Chưa sở hữu: Chuyển bảng giá về hình Asset 46 (có chữ BUY sẵn), hiện text giá, ẩn text Action
+                _priceBoardImage.sprite = category.PriceBoardSprite;
+                
+                if (_actionText != null) _actionText.gameObject.SetActive(false); // Ẩn text Mua vì hình đã có chữ BUY
+                if (_priceText != null)
+                {
+                    _priceText.gameObject.SetActive(true);
+                    _priceText.text = skinData.Price.ToString();
+                }
             }
         }
         else
         {
-            // Reset hiển thị cho các Tab khác (Nếu bạn muốn làm logic mua Boost/Coin sau thì thêm vào đây)
-            if (_priceText != null) _priceText.text = "---";
-            if (_actionText != null) _actionText.text = "MUA";
+            // Reset hiển thị cho các Tab khác (Mặc định là dùng hình gốc của category)
+            _priceBoardImage.sprite = category.PriceBoardSprite;
+            if (_priceText != null)
+            {
+                _priceText.gameObject.SetActive(true);
+                // TODO: Điền logic lấy giá cho Boost hoặc Coin
+                _priceText.text = "???"; 
+            }
+            // Tab Boost/Coin nếu hình đã có chữ BUY thì ẩn action text đi
+            if (_actionText != null) _actionText.gameObject.SetActive(false);
+        }
+    }
+
+    private void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        if (obj == null) return;
+        obj.layer = newLayer;
+        foreach (Transform child in obj.transform)
+        {
+            if (child != null) SetLayerRecursively(child.gameObject, newLayer);
         }
     }
 
