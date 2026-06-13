@@ -43,9 +43,10 @@ public class ShopManager : MonoBehaviour
     [SerializeField] private float _modelScale = 45f;         // Tùy chỉnh độ lớn của đĩa 3D trong Shop
 
     [Header("Action UI (Nút Mua/Trang bị)")]
+    [SerializeField] private GameObject _buyButtonObj;        // Kéo cái Nút Xanh lá (chữ BUY) vào đây
     [SerializeField] private Sprite _equipBoardSprite;        // Kéo khung gỗ trống (Asset 56) vào đây
-    [SerializeField] private TextMeshProUGUI _priceText;      // Text hiện giá tiền trên bảng giá (bật khi Mua)
-    [SerializeField] private TextMeshProUGUI _actionText;     // Text "CHỌN", "ĐANG DÙNG" (bật khi đã có Skin)
+    [SerializeField] private TextMeshProUGUI _priceText;      // Text hiện giá tiền nằm trên khung gỗ
+    [SerializeField] private TextMeshProUGUI _actionText;     // Text "CHỌN" / "ĐANG DÙNG" nằm trên khung gỗ
     
     private int _currentTabIndex = 0;
     private int _currentIndex = 0;
@@ -274,6 +275,9 @@ public class ShopManager : MonoBehaviour
     {
         if (SaveLoadManager.Data == null) return;
         var category = _categories[_currentTabIndex];
+        
+        // Lấy component Button của Bảng Giá để bật/tắt (Ngăn click nhầm)
+        Button boardButton = _priceBoardImage.GetComponent<Button>();
 
         // LOGIC CHO TAB SKIN (Tab 2)
         if (_currentTabIndex == 2 && category.Use3DModel && _shopConfig != null && _shopConfig.Skins.Length > 0)
@@ -284,7 +288,13 @@ public class ShopManager : MonoBehaviour
 
             if (isOwned)
             {
-                // Đã sở hữu: Chuyển bảng giá thành khung gỗ trống, ẩn text giá, hiện text CHỌN / ĐANG DÙNG
+                // TẮT ẨN cái nút xanh lá chữ BUY đi
+                if (_buyButtonObj != null) _buyButtonObj.SetActive(false);
+                
+                // Cho phép bấm vào Bảng gỗ để Chọn
+                if (boardButton != null) boardButton.enabled = true;
+
+                // Chuyển bảng giá thành khung gỗ trống, ẩn text giá, hiện text CHỌN / ĐANG DÙNG đè lên khung gỗ
                 if (_equipBoardSprite != null) _priceBoardImage.sprite = _equipBoardSprite;
                 
                 if (_priceText != null) _priceText.gameObject.SetActive(false);
@@ -296,10 +306,16 @@ public class ShopManager : MonoBehaviour
             }
             else
             {
-                // Chưa sở hữu: Chuyển bảng giá về hình Asset 46 (có chữ BUY sẵn), hiện text giá, ẩn text Action
+                // BẬT LÊN cái nút xanh lá chữ BUY
+                if (_buyButtonObj != null) _buyButtonObj.SetActive(true);
+                
+                // CẤM bấm vào Bảng gỗ (Bắt buộc phải bấm nút xanh lá để mua)
+                if (boardButton != null) boardButton.enabled = false;
+
+                // Chưa sở hữu: Chuyển bảng giá về hình Asset 46 (có đồng xu), hiện text giá, ẩn text Action
                 _priceBoardImage.sprite = category.PriceBoardSprite;
                 
-                if (_actionText != null) _actionText.gameObject.SetActive(false); // Ẩn text Mua vì hình đã có chữ BUY
+                if (_actionText != null) _actionText.gameObject.SetActive(false); 
                 if (_priceText != null)
                 {
                     _priceText.gameObject.SetActive(true);
@@ -309,7 +325,13 @@ public class ShopManager : MonoBehaviour
         }
         else
         {
-            // Reset hiển thị cho các Tab khác (Mặc định là dùng hình gốc của category)
+            // Tab Boost/Coin: Luôn bật nút BUY xanh lá
+            if (_buyButtonObj != null) _buyButtonObj.SetActive(true);
+            
+            // Tab Boost/Coin: Cấm bấm vào Bảng giá, chỉ cho bấm nút BUY
+            if (boardButton != null) boardButton.enabled = false;
+
+            // Reset hiển thị cho các Tab khác
             _priceBoardImage.sprite = category.PriceBoardSprite;
             if (_priceText != null)
             {
