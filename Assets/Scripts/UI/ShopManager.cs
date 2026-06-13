@@ -4,13 +4,18 @@ using TMPro;
 
 public class ShopManager : MonoBehaviour
 {
+    [Header("Tabs")]
+    [SerializeField] private Image[] _tabImages; // Kéo 3 tab (Boot, Coin, Skin) vào đây
+    [SerializeField] private Color _activeTabColor = Color.white; // Màu sáng (đang chọn)
+    [SerializeField] private Color _inactiveTabColor = new Color(0.5f, 0.5f, 0.5f, 1f); // Màu tối (không chọn)
+
     [Header("Boosters Data")]
     [SerializeField] private Sprite[] _boosterSprites; // Kéo thả Asset 48, 49, 50, 51 vào đây
 
     [Header("UI References")]
     [SerializeField] private Image _mainBoosterImage; // Kéo object 'Item' vào đây (KHÔNG phải Nen)
     [SerializeField] private TextMeshProUGUI _quantityText; // Kéo object 'SoLuong' vào đây
-    
+
     [Header("Indicators (Dấu chấm)")]
     [SerializeField] private Image[] _indicatorImages; // Kéo 4 cái Hienthio vào đây
     [SerializeField] private Sprite _activeDotSprite;   // Asset 53 (Màu tím)
@@ -23,6 +28,28 @@ public class ShopManager : MonoBehaviour
         // Mỗi lần mở Shop lên thì reset về item đầu tiên
         _currentIndex = 0;
         UpdateUI();
+        
+        // Mặc định chọn Tab 0 (Boost)
+        SwitchTab(0);
+    }
+
+    /// <summary>
+    /// Chuyển đổi màu sắc của các Tab. Gắn hàm này vào nút bấm của từng Tab (truyền tham số 0, 1, 2)
+    /// </summary>
+    public void SwitchTab(int tabIndex)
+    {
+        if (_tabImages == null) return;
+
+        for (int i = 0; i < _tabImages.Length; i++)
+        {
+            if (_tabImages[i] != null)
+            {
+                // Thay đổi màu: Tab đang chọn thì trắng (sáng), Tab không chọn thì xám (tối)
+                _tabImages[i].color = (i == tabIndex) ? _activeTabColor : _inactiveTabColor;
+            }
+        }
+        
+        // TODO: Mở/tắt các Panel tương ứng với Tab (PanelBoost, PanelCoin, PanelSkin) ở đây
     }
 
     /// <summary>
