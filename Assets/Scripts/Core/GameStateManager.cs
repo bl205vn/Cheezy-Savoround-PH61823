@@ -20,11 +20,6 @@ public class GameStateManager : MonoBehaviour
     /// </summary>
     public static event Action<IGameState> OnStateChanged;
 
-    /// <summary>
-    /// Observer Event: Phát khi game kết thúc.
-    /// UI/Audio lắng nghe để hiển thị Game Over.
-    /// </summary>
-    public static event Action OnGameOver;
 
     private void Awake()
     {
@@ -90,6 +85,6 @@ public class GameStateManager : MonoBehaviour
     public void TriggerGameOver()
     {
         ChangeState(GameOver);
-        OnGameOver?.Invoke();
+        GameEvents.TriggerGameOver();
     }
 }

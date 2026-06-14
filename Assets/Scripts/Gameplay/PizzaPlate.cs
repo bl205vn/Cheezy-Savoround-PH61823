@@ -191,7 +191,7 @@ public class PizzaPlate : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    public void PlaySnapEffect()
+    public void PlaySnapEffect(System.Action onComplete = null)
     {
         transform.DOKill();
         transform.localScale = _baseScale; // Reset lại scale gốc trong trường hợp tween cũ bị ngắt quãng
@@ -204,6 +204,8 @@ public class PizzaPlate : MonoBehaviour
         seq.Append(transform.DOScale(squashScale, _snapSquashDuration).SetEase(Ease.OutQuad));
         seq.Append(transform.DOScale(stretchScale, _snapSquashDuration).SetEase(Ease.OutQuad));
         seq.Append(transform.DOScale(_baseScale, _snapSquashDuration).SetEase(Ease.OutBounce));
+        
+        if (onComplete != null) seq.OnComplete(() => onComplete.Invoke());
     }
 
     private void OnDestroy()

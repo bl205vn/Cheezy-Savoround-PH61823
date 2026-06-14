@@ -7,21 +7,22 @@ public class GridManager : MonoBehaviour
     public static GridManager Instance { get; private set; }
 
     [SerializeField] private GameObject _cellPrefab;
-    [SerializeField] private float _cellSpacing = 1.0f; // Khoảng cách giữa các ô
+    [SerializeField] private float _cellSpacing; // Khoảng cách giữa các ô
     
     [Header("Visual")]
     [SerializeField] private Color _lightCellColor = new Color(0.9f, 0.85f, 0.7f); // Màu sáng (lẻ)
     [SerializeField] private Color _darkCellColor = new Color(0.55f, 0.5f, 0.35f);  // Màu tối hơn (chẵn)
 
     [Header("Score Settings")]
-    [SerializeField] private int _scorePerExplosion = 100; // Có thể chỉnh điểm mỗi lần nổ đĩa tại đây
+    [SerializeField] private int _scorePerExplosion; // Có thể chỉnh điểm mỗi lần nổ đĩa tại đây
 
 
     // Dictionary lưu trạng thái các ô
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
     private List<GridCell> _cellsToProcess = new List<GridCell>();
     private HashSet<GridCell> _cellsInQueue = new HashSet<GridCell>();
-    private int _mergeSequenceCount = 0; // Đếm số lần merge liên tiếp để tăng tốc độ bay
+    private int _mergeSequenceCount; // Đếm số lần merge liên tiếp để tăng tốc độ bay
+    private int _explosionCountThisTurn; // Đếm số đĩa nổ trong lượt hiện tại để tính combo
     
     // Cache buffer để tránh GC alloc trong gameplay loop
     private readonly List<int> _gameOverTypeBuffer = new List<int>();
@@ -33,7 +34,7 @@ public class GridManager : MonoBehaviour
 
     // FIFO tie-breaker: đảm bảo cell enqueue trước được xử lý trước khi cùng priority
     private readonly Dictionary<GridCell, int> _enqueueOrder = new Dictionary<GridCell, int>();
-    private int _enqueueCounter = 0;
+    private int _enqueueCounter;
 
     // Relay 2-step: cache đích relay để push đúng sau khi epicenter đầy tạm. Key = epicenter cell.
     private readonly Dictionary<GridCell, (int type, GridCell dest)> _pendingRelays = new Dictionary<GridCell, (int, GridCell)>();
@@ -163,12 +164,12 @@ public class GridManager : MonoBehaviour
 
     private void OnEnable()
     {
-        InputManager.OnPlatePlaced += HandlePlatePlaced;
+        GameEvents.OnPlatePlaced += HandlePlatePlaced;
     }
 
     private void OnDisable()
     {
-        InputManager.OnPlatePlaced -= HandlePlatePlaced;
+        GameEvents.OnPlatePlaced -= HandlePlatePlaced;
     }
 
     public GridCell GetCell(Vector2Int gridPos)
@@ -225,6 +226,7 @@ public class GridManager : MonoBehaviour
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell)
     {
         _mergeSequenceCount = 0; // Reset bộ đếm khi bắt đầu một combo mới
+        _explosionCountThisTurn = 0; // Reset đếm combo
         CalculatePriorities(cell); // Gán trọng số Dijkstra từ tâm chấn
         EnqueueCell(cell);
         
@@ -817,7 +819,6 @@ public class GridManager : MonoBehaviour
         return false;
     }
 
-    public static event System.Action<int> OnScoreAdded; // Sự kiện cộng điểm
 
     private void ExplodePlate(GridCell cell)
     {
@@ -832,23 +833,32 @@ public class GridManager : MonoBehaviour
             explosionVFX.PlayAt(vfxPos, plate.transform.localScale);
         }
 
-        // --- PHÁT ÂM THANH NỔ (Có Pitch Shift) ---
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayExplosionSound();
-        }
+        _explosionCountThisTurn++;
         
-        int scoreGained = _scorePerExplosion; // Dùng điểm cài đặt ở Inspector thay vì viết cứng
+        // Nhân điểm theo combo (đĩa đầu x1, đĩa hai x2...)
+        int scoreGained = _scorePerExplosion * _explosionCountThisTurn; 
         
         // --- CHẠY CHỮ ĐIỂM SỐ BAY LÊN ---
         FloatingText scoreText = ObjectPoolManager.Instance.GetFloatingText();
         if (scoreText != null)
         {
-            scoreText.Setup("+" + scoreGained, plate.transform.position + new Vector3(0, 1f, 0));
+            scoreText.Setup("+{0}", scoreGained, plate.transform.position + new Vector3(0, 1f, 0));
+        }
+
+        if (_explosionCountThisTurn >= 2)
+        {
+            // Tái sử dụng Prefab chữ nổi cho Combo, bay cao hơn một chút
+            FloatingText comboText = ObjectPoolManager.Instance.GetFloatingText();
+            if (comboText != null)
+            {
+                comboText.Setup("Combo x{0}!", _explosionCountThisTurn, plate.transform.position + new Vector3(0, 1.5f, 0));
+            }
+            GameEvents.TriggerComboAchieved(_explosionCountThisTurn);
         }
         
-        // Phát sự kiện cộng điểm cho LevelProgressUI nghe
-        OnScoreAdded?.Invoke(scoreGained);
+        int pizzaType = plate.GetMajorityType();
+        // Phát sự kiện cộng điểm và nổ đĩa
+        GameEvents.TriggerPlateExploded(pizzaType, scoreGained);
      
         plate.ClearSlices(); // Trả pool miếng bánh
         

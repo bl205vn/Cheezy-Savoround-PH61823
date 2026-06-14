@@ -26,15 +26,19 @@ public class LevelProgressUI : MonoBehaviour
         InitializeUI();
     }
 
+    private bool _pendingLevelUp = false;
+
     private void OnEnable()
     {
-        // Lắng nghe sự kiện cộng điểm từ GridManager (Event-driven, Zero-GC)
-        GridManager.OnScoreAdded += HandleScoreAdded;
+        // Lắng nghe sự kiện cộng điểm từ GameEvents (Event-driven, Zero-GC)
+        GameEvents.OnPlateExploded += HandlePlateExploded;
+        GameStateManager.OnStateChanged += HandleStateChanged;
     }
 
     private void OnDisable()
     {
-        GridManager.OnScoreAdded -= HandleScoreAdded;
+        GameEvents.OnPlateExploded -= HandlePlateExploded;
+        GameStateManager.OnStateChanged -= HandleStateChanged;
     }
 
     private void InitializeUI()
@@ -43,17 +47,35 @@ public class LevelProgressUI : MonoBehaviour
         UpdateFillImage();
     }
 
-    private void HandleScoreAdded(int score)
+    private void HandlePlateExploded(int pizzaType, int score)
     {
         _currentScore += score;
 
         if (_currentScore >= _scoreToNextLevel)
         {
             _currentScore -= _scoreToNextLevel; // Giữ lại điểm thừa cho cấp sau
-            LevelUp();
+            
+            // Chờ FSM về trạng thái Playing để không ngắt ngang chuỗi combo/nổ
+            if (GameStateManager.Instance != null && GameStateManager.Instance.CurrentState is PlayingState)
+            {
+                LevelUp();
+            }
+            else
+            {
+                _pendingLevelUp = true;
+            }
         }
 
         UpdateFillImage();
+    }
+
+    private void HandleStateChanged(IGameState state)
+    {
+        if (_pendingLevelUp && state is PlayingState)
+        {
+            _pendingLevelUp = false;
+            LevelUp();
+        }
     }
 
     private void LevelUp()

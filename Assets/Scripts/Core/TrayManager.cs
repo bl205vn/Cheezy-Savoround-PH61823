@@ -32,13 +32,13 @@ public class TrayManager : MonoBehaviour
 
     private void OnEnable()
     {
-        InputManager.OnPlatePlaced += HandlePlatePlacedOnGrid;
+        GameEvents.OnPlatePlaced += HandlePlatePlacedOnGrid;
         GameStateManager.OnStateChanged += HandleStateChanged;
     }
 
     private void OnDisable()
     {
-        InputManager.OnPlatePlaced -= HandlePlatePlacedOnGrid;
+        GameEvents.OnPlatePlaced -= HandlePlatePlacedOnGrid;
         GameStateManager.OnStateChanged -= HandleStateChanged;
     }
 

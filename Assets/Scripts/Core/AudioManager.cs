@@ -41,6 +41,24 @@ public class AudioManager : MonoBehaviour
         _pitchSource.playOnAwake = false;
     }
 
+    private void OnEnable()
+    {
+        GameEvents.OnPlatePlaced += HandlePlatePlaced;
+        GameEvents.OnPlatePlaceFailed += HandlePlatePlaceFailed;
+        GameEvents.OnPlateExploded += HandlePlateExploded;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnPlatePlaced -= HandlePlatePlaced;
+        GameEvents.OnPlatePlaceFailed -= HandlePlatePlaceFailed;
+        GameEvents.OnPlateExploded -= HandlePlateExploded;
+    }
+
+    private void HandlePlatePlaced(PizzaPlate plate, GridCell cell) => PlayPlaceSound();
+    private void HandlePlatePlaceFailed(PizzaPlate plate) => PlayErrorSound();
+    private void HandlePlateExploded(int pizzaType, int scoreAdded) => PlayExplosionSound();
+
     public void PlayExplosionSound()
     {
         if (_explosionClip == null || _pitchSource == null) return;

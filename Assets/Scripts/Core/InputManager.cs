@@ -26,7 +26,7 @@ public class InputManager : MonoBehaviour
     }
     private readonly HitDistanceComparer _hitComparer = new HitDistanceComparer();
 
-    public static event Action<PizzaPlate, GridCell> OnPlatePlaced;
+    // Event giờ đã được quản lý tập trung ở GameEvents.cs
 
     private void Awake()
     {
@@ -174,18 +174,27 @@ public class InputManager : MonoBehaviour
             var hit = _hitBuffer[i];
             if (hit.collider.TryGetComponent(out GridCell cell) && !cell.IsOccupied)
             {
-                // Snap vào ô lưới
-                cell.PlacePlate(_draggedPlate);
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayPlaceSound();
-                OnPlatePlaced?.Invoke(_draggedPlate, cell);
+                // Thay đổi trạng thái FSM ngay lập tức sang Animating để block input người chơi
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.ChangeState(GameStateManager.Instance.Animating);
+                }
+
+                PizzaPlate plateToPlace = _draggedPlate;
                 _draggedPlate = null;
+
+                // Snap vào ô lưới và chờ animation xong mới bắn event
+                cell.PlacePlate(plateToPlace, () => {
+                    GameEvents.TriggerPlatePlaced(plateToPlace, cell);
+                });
+                
                 return; // Thành công
             }
         }
 
         // Không tìm thấy ô hoặc ô đã có đĩa -> trả về chỗ cũ
+        GameEvents.TriggerPlatePlaceFailed(_draggedPlate);
         _draggedPlate.PlayShakeAndReturn();
-        if (AudioManager.Instance != null) AudioManager.Instance.PlayErrorSound();
         _draggedPlate = null;
     }
 }

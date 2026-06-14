@@ -43,7 +43,7 @@ public class GridCell : MonoBehaviour
         return transform.position + new Vector3(0, _snapOffsetY, 0);
     }
 
-    public void PlacePlate(PizzaPlate plate)
+    public void PlacePlate(PizzaPlate plate, System.Action onSnapComplete = null)
     {
         IsOccupied = true;
         CurrentPlate = plate;
@@ -56,7 +56,7 @@ public class GridCell : MonoBehaviour
         // Gọi Coroutine nhảy vào ô và chạy hiệu ứng Squash sau khi xong
         plate.StartCoroutine(plate.AnimateToCell(plate.transform.position, snapPosition, 0.25f, () => 
         {
-            plate.PlaySnapEffect();
+            plate.PlaySnapEffect(onSnapComplete);
         }));
     }
 
