@@ -28,8 +28,12 @@ public class GridManager : MonoBehaviour
     
     // Cache buffer cho Transit Station (Epicenter relay logic)
     private readonly List<GridCell> _transitNeighbors = new List<GridCell>();
-    private readonly Dictionary<int, int> _typeGlobalCount = new Dictionary<int, int>(); // type → tổng số miếng toàn vùng
-    private readonly Dictionary<int, GridCell> _typeBestNeighbor = new Dictionary<int, GridCell>(); // type → đĩa hàng xóm có nhiều nhất
+    private readonly Dictionary<int, int> _typeGlobalCount = new Dictionary<int, int>();
+    private readonly Dictionary<int, GridCell> _typeBestNeighbor = new Dictionary<int, GridCell>();
+
+    // FIFO tie-breaker: đảm bảo cell enqueue trước được xử lý trước khi cùng priority
+    private readonly Dictionary<GridCell, int> _enqueueOrder = new Dictionary<GridCell, int>();
+    private int _enqueueCounter = 0;
 
     private void EnqueueCell(GridCell cell)
     {
@@ -37,6 +41,7 @@ public class GridManager : MonoBehaviour
         if (_cellsInQueue.Contains(cell)) return;
         _cellsToProcess.Add(cell);
         _cellsInQueue.Add(cell);
+        _enqueueOrder[cell] = _enqueueCounter++;
     }
 
     private void Awake()
@@ -148,6 +153,8 @@ public class GridManager : MonoBehaviour
         _gridCells.Clear();
         _cellsToProcess.Clear();
         _cellsInQueue.Clear();
+        _enqueueOrder.Clear();
+        _enqueueCounter = 0;
     }
 
     private void OnEnable()
@@ -235,10 +242,14 @@ public class GridManager : MonoBehaviour
         if (_cellsToProcess.Count == 0) return false;
 
         // Sắp xếp giảm dần theo Ưu tiên (Priority 9 xét trước)
+        // Tie-breaker FIFO: cùng priority → cell enqueue trước được xử lý trước
         _cellsToProcess.Sort((a, b) => {
             int prioA = a.IsOccupied ? a.CurrentPlate.Priority : -1;
             int prioB = b.IsOccupied ? b.CurrentPlate.Priority : -1;
-            return prioB.CompareTo(prioA);
+            if (prioA != prioB) return prioB.CompareTo(prioA);
+            int orderA = _enqueueOrder.ContainsKey(a) ? _enqueueOrder[a] : int.MaxValue;
+            int orderB = _enqueueOrder.ContainsKey(b) ? _enqueueOrder[b] : int.MaxValue;
+            return orderA.CompareTo(orderB);
         });
 
         GridCell centerCell = _cellsToProcess[0];
@@ -497,17 +508,21 @@ public class GridManager : MonoBehaviour
 
     private int FindSelfExplodeType(PizzaPlate centerPlate)
     {
-        int bestType = -1;
-        int bestCenterCount = 0;
+        if (centerPlate.IsFull()) return -1; // Hết slot, không cần tìm target tự nổ
         foreach (var kvp in _typeGlobalCount)
         {
-            if (kvp.Value >= 6 && centerPlate.HasType(kvp.Key))
+            if (!centerPlate.HasType(kvp.Key)) continue;
+            int cc = centerPlate.GetCountOf(kvp.Key);
+            int needed = 6 - cc;
+            int availableFromNeighbors = kvp.Value - cc;
+            // Type đầu tiên khả thi (gom đủ 6 từ hàng xóm) → return ngay
+            // Nếu fail thì Phase 1 return ProcessNextMerge() (đã fix), không thử type khác
+            if (availableFromNeighbors >= needed && cc > 0)
             {
-                int cc = centerPlate.GetCountOf(kvp.Key);
-                if (cc > bestCenterCount) { bestType = kvp.Key; bestCenterCount = cc; }
+                return kvp.Key;
             }
         }
-        return bestType;
+        return -1;
     }
 
     private bool TryTransitPull(GridCell centerCell, PizzaPlate centerPlate, int targetType)
@@ -589,8 +604,13 @@ public class GridManager : MonoBehaviour
                 if (srcPlate.GetCountOf(type) >= destPlate.GetCountOf(type)) continue;
 
                 // ANTI-BOUNCE: Nếu epicenter đang 5/6 và type relay không phải đa số,
-                // hút vào sẽ làm epicenter 6/6 không tinh khiết → IsPurging → tốn 1 vòng thừa
-                if (centerPlate.GetTotalSlices() == 5 && centerPlate.GetCountOf(type) != 5) continue;
+                // chỉ chặn nếu dest cũng đầy (epicenter sẽ kẹt với slice này).
+                // Nếu dest còn chỗ → cho relay, epicenter đầy 6/6 tạm nhưng push ra lượt sau.
+                if (centerPlate.GetTotalSlices() == 5 && centerPlate.GetCountOf(type) != 5)
+                {
+                    if (destPlate.IsFull()) continue; // Dest đầy → epicenter kẹt → chặn
+                    // Dest còn chỗ → cho phép relay tạm
+                }
 
                 // Hút từ src → epicenter (trung chuyển)
                 PizzaSliceVisual slice = srcPlate.RemoveSliceOfType(type);
