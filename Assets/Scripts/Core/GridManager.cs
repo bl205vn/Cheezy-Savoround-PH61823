@@ -953,13 +953,17 @@ public class GridManager : MonoBehaviour
             GameEvents.TriggerPlateExploded(-1, bonusScore);
 
             // 2. VỀ MẶT VIEW (HIỂN THỊ UI):
+            // Lưu lại giá trị combo và vị trí để truyền vào closure, tránh bị reset nếu lượt mới bắt đầu ngay lập tức
+            int finalComboCount = _explosionCountThisTurn;
+            Vector3 finalCenterPos = centerPos;
+            
             // Lùi lại _comboRevealDelay giây mới đập chữ Combo lên màn hình để không đè vào chữ +100 của đĩa cuối cùng
             DOVirtual.DelayedCall(_comboRevealDelay, () =>
             {
                 FloatingText comboText = ObjectPoolManager.Instance.GetFloatingText();
                 if (comboText != null)
                 {
-                    comboText.Setup("Combo x{0}!", _explosionCountThisTurn, centerPos + _comboTextOffset, _comboTextScale);
+                    comboText.Setup("Combo x{0}!", finalComboCount, finalCenterPos + _comboTextOffset, _comboTextScale);
                 }
             });
         }

@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
@@ -20,6 +21,9 @@ public class UIManager : MonoBehaviour
 
     [Header("In-Game")]
     [SerializeField] private GameObject _hudCanvas;
+    [SerializeField] private ShopManager _shopManager; // Reference để gọi SwitchTab từ UIManager
+
+    private bool _shopOpenedFromGame; // Cờ đánh dấu Shop được mở từ giữa game
 
     private void Awake()
     {
@@ -58,6 +62,52 @@ public class UIManager : MonoBehaviour
     public void OpenAchievement() => ShowPanel(_achievementPanel);
     public void OpenHowToPlay() => ShowPanel(_howToPlayPanel);
     public void BackToStarter() => ShowPanel(_starterPanel);
+
+    /// <summary>
+    /// Mở Shop overlay ngay giữa game, nhảy vào Tab và Item chỉ định.
+    /// Gọi từ code: UIManager.Instance.OpenShopFromGame(tabIndex, itemIndex)
+    /// </summary>
+    public void OpenShopFromGame(int tabIndex, int itemIndex = 0)
+    {
+        _shopOpenedFromGame = true;
+
+        // Tắt HUD để tránh chồng chéo UI
+        if (_hudCanvas != null) _hudCanvas.SetActive(false);
+
+        // Bật panel Shop
+        if (_shopPanel != null) _shopPanel.SetActive(true);
+
+        // Chuyển sang Tab + Item chỉ định (0: Boost, 1: Coin, 2: Skin)
+        if (_shopManager != null) _shopManager.SwitchTab(tabIndex, itemIndex);
+    }
+
+    /// <summary>
+    /// Overload không tham số để gắn OnClick Button (mặc định mở Tab Coin).
+    /// </summary>
+    public void OpenShopFromGame()
+    {
+        OpenShopFromGame(1); // Tab Coin
+    }
+
+    /// <summary>
+    /// Được gọi bởi Button "Exit" (dấu X) trong Shop.
+    /// Thay thế BackToStarter() để xử lý đúng ngữ cảnh.
+    /// </summary>
+    public void CloseShop()
+    {
+        if (_shopOpenedFromGame)
+        {
+            // Mở từ giữa game → tắt Shop, bật lại HUD, quay lại chơi tiếp
+            _shopOpenedFromGame = false;
+            if (_shopPanel != null) _shopPanel.SetActive(false);
+            if (_hudCanvas != null) _hudCanvas.SetActive(true);
+        }
+        else
+        {
+            // Mở từ Lobby → quay về Starter Panel như bình thường
+            BackToStarter();
+        }
+    }
 
     /// <summary>
     /// Được gọi bởi Button "Start" ở Starter Panel
@@ -103,5 +153,41 @@ public class UIManager : MonoBehaviour
         }
         
         // Ghi chú: Logic xóa lưới (Clear Grid/Tray) để reset màn chơi sẽ được bổ sung sau
+    }
+
+    /// <summary>
+    /// Được gọi bởi Button "Restart" trong HUD (Góc trên bên phải)
+    /// </summary>
+    public void RestartGame()
+    {
+        // 0. Kill MỌI tween đang chạy để tránh MissingReferenceException
+        // (Các đĩa đã rời cell qua PlayShrinkAndReturn vẫn giữ DOScale tween treo)
+        DOTween.KillAll();
+
+        // 1. Đặt level về 1 theo yêu cầu
+        if (SaveLoadManager.Data != null)
+        {
+            SaveLoadManager.Data.CurrentLevel = 1;
+            SaveLoadManager.Save();
+        }
+
+        // 2. Reset thanh tiến trình
+        var levelProgress = FindFirstObjectByType<LevelProgressUI>();
+        if (levelProgress != null)
+        {
+            levelProgress.ResetProgress();
+        }
+
+        // 3. Load lại level 1 (Hàm LoadLevel đã bao gồm ClearGrid và ClearTray)
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.LoadLevel(1);
+        }
+
+        // 4. Chuyển FSM sang trạng thái chơi
+        if (GameStateManager.Instance != null)
+        {
+            GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
+        }
     }
 }

@@ -55,23 +55,23 @@ MonoBehaviour:
     Price: 100
     Icon: {fileID: 21300000, guid: f6e7f0fab7762f04aa206f60ba3230a7, type: 3}
   CoinPacks:
-  - Id: 
-    DisplayName: 
-    PriceString: 
-    RewardAmount: 0
-    Icon: {fileID: 0}
-  - Id: 
-    DisplayName: 
-    PriceString: 
-    RewardAmount: 0
-    Icon: {fileID: 0}
-  - Id: 
-    DisplayName: 
-    PriceString: 
-    RewardAmount: 0
-    Icon: {fileID: 0}
-  - Id: 
-    DisplayName: 
-    PriceString: 
-    RewardAmount: 0
-    Icon: {fileID: 0}
+  - Id: CoinPack01
+    DisplayName: "V\xE0i xu l\u1EBB"
+    PriceString: 0.99$
+    RewardAmount: 300
+    Icon: {fileID: 21300000, guid: d0415a94ec2a9294e950d700b35753e8, type: 3}
+  - Id: CoinPack02
+    DisplayName: "T\xFAi coin nh\u1ECF"
+    PriceString: 1.99$
+    RewardAmount: 800
+    Icon: {fileID: 21300000, guid: 9eb8677ad8eeb884a92e1ca633f4c56b, type: 3}
+  - Id: CoinPack03
+    DisplayName: "T\xFAi coin l\u1EDBn"
+    PriceString: 3.99$
+    RewardAmount: 2000
+    Icon: {fileID: 21300000, guid: 5f0d0e61d17281c4799440306dd1ded7, type: 3}
+  - Id: CoinPack04
+    DisplayName: "H\xF2m coin"
+    PriceString: 4.99$
+    RewardAmount: 65000
+    Icon: {fileID: 21300000, guid: db5756b59c93c2e458cfd848fd443462, type: 3}

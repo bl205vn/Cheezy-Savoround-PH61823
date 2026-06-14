@@ -74,12 +74,12 @@ public class ShopManager : MonoBehaviour
     /// <summary>
     /// Chuyển đổi màu sắc của các Tab. Gắn hàm này vào nút bấm của từng Tab (truyền tham số 0, 1, 2)
     /// </summary>
-    public void SwitchTab(int tabIndex)
+    public void SwitchTab(int tabIndex, int itemIndex = 0)
     {
         if (_tabImages == null) return;
 
         _currentTabIndex = tabIndex;
-        _currentIndex = 0; // Reset về item đầu tiên của Tab mới
+        _currentIndex = itemIndex; // Cho phép nhảy thẳng tới item chỉ định
 
         // 1. Cập nhật màu các nút Tab
         for (int i = 0; i < _tabImages.Length; i++)

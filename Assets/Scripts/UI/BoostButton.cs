@@ -14,7 +14,6 @@ public class BoostButton : MonoBehaviour
     [Header("Configuration")]
     [SerializeField] private BoosterType _boosterType;
     [SerializeField] private TMP_Text _quantityText;
-    [SerializeField] private ShopConfig _shopConfig; // Dùng để tra giá khi mua
 
     private void OnEnable()
     {
@@ -64,35 +63,10 @@ public class BoostButton : MonoBehaviour
         }
         else
         {
-            // Xử lý MUA boost
-            if (_shopConfig != null && _shopConfig.Boosters != null && typeIndex < _shopConfig.Boosters.Length)
+            // Hết boost → Mở Shop ở Tab Boost, nhảy thẳng tới đúng loại Boost
+            if (UIManager.Instance != null)
             {
-                int price = _shopConfig.Boosters[typeIndex].Price;
-                if (data.Gold >= price)
-                {
-                    // Trừ tiền và thêm boost
-                    data.Gold -= price;
-                    data.BoostersOwned[typeIndex]++;
-                    SaveLoadManager.Save();
-                    
-                    // Cập nhật lại UI
-                    UpdateQuantityDisplay();
-                    
-                    // Cập nhật tiền (nếu có GoldDisplay)
-                    GoldDisplay.UpdateAll();
-                    
-                    // Phát âm thanh
-                    if (AudioManager.Instance != null) AudioManager.Instance.PlayPlaceSound();
-                }
-                else
-                {
-                    Debug.Log("Không đủ tiền mua Boost!");
-                    if (AudioManager.Instance != null) AudioManager.Instance.PlayErrorSound();
-                }
-            }
-            else
-            {
-                Debug.LogWarning("Chưa gắn ShopConfig hoặc cấu hình Boosters chưa đủ trong ShopConfig!");
+                UIManager.Instance.OpenShopFromGame(0, (int)_boosterType); // Tab 0 = Boost, item = loại boost
             }
         }
     }

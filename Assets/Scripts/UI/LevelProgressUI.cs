@@ -103,6 +103,14 @@ public class LevelProgressUI : MonoBehaviour
         }
     }
 
+    public void ResetProgress()
+    {
+        _currentScore = 0;
+        _pendingLevelUp = false;
+        UpdateLevelTexts();
+        UpdateFillImage();
+    }
+
     private void UpdateLevelTexts()
     {
         if (SaveLoadManager.Data != null)
