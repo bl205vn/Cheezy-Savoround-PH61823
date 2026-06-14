@@ -6,13 +6,15 @@ using DG.Tweening;
 public class FloatingText : MonoBehaviour
 {
     private TextMeshPro _textMesh;
+    private Vector3 _originalScale;
 
     private void Awake()
     {
         _textMesh = GetComponent<TextMeshPro>();
+        _originalScale = transform.localScale;
     }
 
-    public void Setup(string text, Vector3 startPos)
+    public void Setup(string text, Vector3 startPos, float scale = 1f)
     {
         if (_textMesh == null) _textMesh = GetComponent<TextMeshPro>();
 
@@ -21,6 +23,7 @@ public class FloatingText : MonoBehaviour
         _textMesh.DOKill();
 
         transform.position = startPos;
+        transform.localScale = _originalScale * scale;
         
         // Ép chữ luôn xoay mặt về Camera
         Vector3 moveDirection = Vector3.forward; // Mặc định bay theo trục Z nếu có lỗi
@@ -51,12 +54,13 @@ public class FloatingText : MonoBehaviour
     }
 
     // Zero-GC Overload cho điểm số (VD: "+100")
-    public void Setup(string format, int value, Vector3 startPos)
+    public void Setup(string format, int value, Vector3 startPos, float scale = 1f)
     {
         if (_textMesh == null) _textMesh = GetComponent<TextMeshPro>();
         transform.DOKill();
         _textMesh.DOKill();
         transform.position = startPos;
+        transform.localScale = _originalScale * scale;
         
         Vector3 moveDirection = Vector3.forward;
         if (Camera.main != null)

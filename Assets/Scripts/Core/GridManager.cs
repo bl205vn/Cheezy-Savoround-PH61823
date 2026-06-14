@@ -15,7 +15,11 @@ public class GridManager : MonoBehaviour
 
     [Header("Score Settings")]
     [SerializeField] private int _scorePerExplosion; // Có thể chỉnh điểm mỗi lần nổ đĩa tại đây
-
+    [SerializeField] private float _scoreTextScale; // Kích cỡ chữ Điểm (so với gốc)
+    [SerializeField] private Vector3 _scoreTextOffset; // Vị trí chữ Điểm xuất hiện
+    [SerializeField] private float _comboTextScale; // Kích cỡ chữ Combo (so với gốc)
+    [SerializeField] private Vector3 _comboTextOffset; // Vị trí chữ Combo xuất hiện
+    [SerializeField] private float _comboRevealDelay; // Thời gian chờ trước khi hiện chữ Combo (để chữ điểm cuối kịp mờ đi)
 
     // Dictionary lưu trạng thái các ô
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
@@ -539,14 +543,19 @@ public class GridManager : MonoBehaviour
     private int FindSelfExplodeType(PizzaPlate centerPlate)
     {
         if (centerPlate.IsFull()) return -1; // Hết slot, không cần tìm target tự nổ
+        int totalSlices = centerPlate.GetTotalSlices();
         foreach (var kvp in _typeGlobalCount)
         {
             if (!centerPlate.HasType(kvp.Key)) continue;
             int cc = centerPlate.GetCountOf(kvp.Key);
+            
+            // CHỈ target nếu đĩa hiện tại đã PURE loại này (không còn loại khác)
+            // Fix triệt để lỗi loop khi đĩa 5/6 hỗn hợp nhưng lại target sai loại thiểu số
+            if (cc != totalSlices) continue;
+
             int needed = 6 - cc;
             int availableFromNeighbors = kvp.Value - cc;
             // Type đầu tiên khả thi (gom đủ 6 từ hàng xóm) → return ngay
-            // Nếu fail thì Phase 1 return ProcessNextMerge() (đã fix), không thử type khác
             if (availableFromNeighbors >= needed && cc > 0)
             {
                 return kvp.Key;
@@ -835,30 +844,16 @@ public class GridManager : MonoBehaviour
 
         _explosionCountThisTurn++;
         
-        // Nhân điểm theo combo (đĩa đầu x1, đĩa hai x2...)
-        int scoreGained = _scorePerExplosion * _explosionCountThisTurn; 
-        
-        // --- CHẠY CHỮ ĐIỂM SỐ BAY LÊN ---
+        // --- CHẠY CHỮ ĐIỂM SỐ CƠ BẢN BÌNH THƯỜNG ---
         FloatingText scoreText = ObjectPoolManager.Instance.GetFloatingText();
         if (scoreText != null)
         {
-            scoreText.Setup("+{0}", scoreGained, plate.transform.position + new Vector3(0, 1f, 0));
+            scoreText.Setup("+{0}", _scorePerExplosion, plate.transform.position + _scoreTextOffset, _scoreTextScale);
         }
 
-        if (_explosionCountThisTurn >= 2)
-        {
-            // Tái sử dụng Prefab chữ nổi cho Combo, bay cao hơn một chút
-            FloatingText comboText = ObjectPoolManager.Instance.GetFloatingText();
-            if (comboText != null)
-            {
-                comboText.Setup("Combo x{0}!", _explosionCountThisTurn, plate.transform.position + new Vector3(0, 1.5f, 0));
-            }
-            GameEvents.TriggerComboAchieved(_explosionCountThisTurn);
-        }
-        
         int pizzaType = plate.GetMajorityType();
-        // Phát sự kiện cộng điểm và nổ đĩa
-        GameEvents.TriggerPlateExploded(pizzaType, scoreGained);
+        // Phát sự kiện cộng điểm cơ bản cho mỗi đĩa nổ
+        GameEvents.TriggerPlateExploded(pizzaType, _scorePerExplosion);
      
         plate.ClearSlices(); // Trả pool miếng bánh
         
@@ -940,6 +935,35 @@ public class GridManager : MonoBehaviour
         }
     }
 
+    public void EvaluateTurnCombo()
+    {
+        if (_explosionCountThisTurn >= 2)
+        {
+            // Điểm lý thuyết nhận được nếu x Combo x 1.5
+            int expectedTotal = Mathf.RoundToInt(_scorePerExplosion * _explosionCountThisTurn * 1.5f);
+            // Điểm cơ bản đã cộng trước đó
+            int baseGiven = _scorePerExplosion * _explosionCountThisTurn;
+            // Số điểm thưởng thêm
+            int bonusScore = expectedTotal - baseGiven;
+            Vector3 centerPos = transform.position; // Hiển thị giữa màn hình / Grid
+
+            // 1. VỀ MẶT LOGIC:
+            // Phải kích hoạt event chốt điểm ngay lập tức, không được delay để tránh làm kẹt data của FSM/LevelProgress
+            GameEvents.TriggerComboAchieved(_explosionCountThisTurn);
+            GameEvents.TriggerPlateExploded(-1, bonusScore);
+
+            // 2. VỀ MẶT VIEW (HIỂN THỊ UI):
+            // Lùi lại _comboRevealDelay giây mới đập chữ Combo lên màn hình để không đè vào chữ +100 của đĩa cuối cùng
+            DOVirtual.DelayedCall(_comboRevealDelay, () =>
+            {
+                FloatingText comboText = ObjectPoolManager.Instance.GetFloatingText();
+                if (comboText != null)
+                {
+                    comboText.Setup("Combo x{0}!", _explosionCountThisTurn, centerPos + _comboTextOffset, _comboTextScale);
+                }
+            });
+        }
+    }
     /// <summary>
     /// Kiểm tra đĩa Priority 9 trống có được phép xóa chưa.
     /// Chỉ cho xóa khi tất cả hàng xóm đã ổn định (trống, hoặc tinh khiết đầy).

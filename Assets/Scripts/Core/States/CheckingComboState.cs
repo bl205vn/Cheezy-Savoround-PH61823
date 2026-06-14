@@ -29,6 +29,12 @@ public class CheckingComboState : IGameState
             }
             else
             {
+                // Gọi GridManager tổng kết combo và cộng điểm thưởng
+                if (GridManager.Instance != null)
+                {
+                    GridManager.Instance.EvaluateTurnCombo();
+                }
+
                 // Kiểm tra Game Over ngay sau khi xử lý xong toàn bộ combo trên lưới
                 if (GridManager.Instance != null && GridManager.Instance.CheckGameOver())
                 {
