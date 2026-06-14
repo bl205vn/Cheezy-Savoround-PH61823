@@ -244,9 +244,13 @@ public class ShopManager : MonoBehaviour
         // 3. Cập nhật Text hiển thị số lượng (Tạm thời chỉ hiển thị cho Boosters)
         if (_quantityText != null && SaveLoadManager.Data != null)
         {
-            // Tạm thời chỉ có dữ liệu số lượng cho Tab Boost (Index 0).
-            if (_currentTabIndex == 0 && SaveLoadManager.Data.BoostersOwned != null && _currentIndex < SaveLoadManager.Data.BoostersOwned.Count)
+            // Chỉ hiển thị số lượng cho Tab Boost (Index 0)
+            if (_currentTabIndex == 0)
             {
+                // Tự động khởi tạo mảng nếu Save cũ chưa có
+                if (SaveLoadManager.Data.BoostersOwned == null) SaveLoadManager.Data.BoostersOwned = new System.Collections.Generic.List<int>();
+                while (SaveLoadManager.Data.BoostersOwned.Count <= _currentIndex) SaveLoadManager.Data.BoostersOwned.Add(0);
+
                 _quantityText.gameObject.SetActive(true);
                 _quantityText.SetText("x{0}", SaveLoadManager.Data.BoostersOwned[_currentIndex]);
             }
@@ -433,11 +437,11 @@ public class ShopManager : MonoBehaviour
             {
                 SaveLoadManager.Data.Gold -= boostData.Price;
                 
-                // Tăng số lượng Booster sở hữu (nếu mảng đã được khởi tạo)
-                if (SaveLoadManager.Data.BoostersOwned != null && _currentIndex < SaveLoadManager.Data.BoostersOwned.Count)
-                {
-                    SaveLoadManager.Data.BoostersOwned[_currentIndex]++;
-                }
+                // Tự động khởi tạo mảng nếu Save cũ chưa có và tăng số lượng
+                if (SaveLoadManager.Data.BoostersOwned == null) SaveLoadManager.Data.BoostersOwned = new System.Collections.Generic.List<int>();
+                while (SaveLoadManager.Data.BoostersOwned.Count <= _currentIndex) SaveLoadManager.Data.BoostersOwned.Add(0);
+                
+                SaveLoadManager.Data.BoostersOwned[_currentIndex]++;
                 
                 SaveLoadManager.Save();
                 UpdateActionUI();
