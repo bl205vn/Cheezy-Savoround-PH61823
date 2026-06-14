@@ -12,6 +12,20 @@ public static class SaveLoadManager
     {
         _saveFilePath = Path.Combine(Application.persistentDataPath, "playerdata.json");
         Load();
+
+        // Đăng ký nhận Vàng khi nổ đĩa (tránh duplicate nếu tắt Domain Reload)
+        GameEvents.OnPlateExploded -= HandlePlateExploded;
+        GameEvents.OnPlateExploded += HandlePlateExploded;
+    }
+
+    private static void HandlePlateExploded(int pizzaType, int scoreAdded, int goldAdded)
+    {
+        if (Data != null)
+        {
+            Data.Gold += goldAdded;
+            // Không Save() liên tục để tránh I/O lag. Thay vào đó, gọi UpdateAll UI.
+            GoldDisplay.UpdateAll();
+        }
     }
 
     /// <summary>

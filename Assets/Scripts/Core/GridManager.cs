@@ -15,6 +15,8 @@ public class GridManager : MonoBehaviour
 
     [Header("Score Settings")]
     [SerializeField] private int _scorePerExplosion; // Có thể chỉnh điểm mỗi lần nổ đĩa tại đây
+    [SerializeField] private int _goldPerExplosion; // Số vàng nhận được khi nổ đĩa
+    [SerializeField] private int _goldPerCombo; // Số vàng THƯỞNG THÊM khi ăn combo
     [SerializeField] private float _scoreTextScale; // Kích cỡ chữ Điểm (so với gốc)
     [SerializeField] private Vector3 _scoreTextOffset; // Vị trí chữ Điểm xuất hiện
     [SerializeField] private float _comboTextScale; // Kích cỡ chữ Combo (so với gốc)
@@ -853,7 +855,7 @@ public class GridManager : MonoBehaviour
 
         int pizzaType = plate.GetMajorityType();
         // Phát sự kiện cộng điểm cơ bản cho mỗi đĩa nổ
-        GameEvents.TriggerPlateExploded(pizzaType, _scorePerExplosion);
+        GameEvents.TriggerPlateExploded(pizzaType, _scorePerExplosion, _goldPerExplosion);
      
         plate.ClearSlices(); // Trả pool miếng bánh
         
@@ -950,7 +952,7 @@ public class GridManager : MonoBehaviour
             // 1. VỀ MẶT LOGIC:
             // Phải kích hoạt event chốt điểm ngay lập tức, không được delay để tránh làm kẹt data của FSM/LevelProgress
             GameEvents.TriggerComboAchieved(_explosionCountThisTurn);
-            GameEvents.TriggerPlateExploded(-1, bonusScore);
+            GameEvents.TriggerPlateExploded(-1, bonusScore, _goldPerCombo); // Sử dụng biến cấu hình thay vì hardcode 0
 
             // 2. VỀ MẶT VIEW (HIỂN THỊ UI):
             // Lưu lại giá trị combo và vị trí để truyền vào closure, tránh bị reset nếu lượt mới bắt đầu ngay lập tức

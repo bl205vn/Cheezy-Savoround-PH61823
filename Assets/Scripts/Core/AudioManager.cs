@@ -59,7 +59,7 @@ public class AudioManager : MonoBehaviour
 
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell) => PlayPlaceSound();
     private void HandlePlatePlaceFailed(PizzaPlate plate) => PlayErrorSound();
-    private void HandlePlateExploded(int pizzaType, int scoreAdded) 
+    private void HandlePlateExploded(int pizzaType, int scoreAdded, int goldAdded) 
     {
         // Tận dụng lỗi thành tính năng: Nếu type == -1 (tức là bonus từ Combo), phát tiếng Combo riêng biệt
         if (pizzaType == -1)

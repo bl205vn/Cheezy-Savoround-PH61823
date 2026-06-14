@@ -110,6 +110,7 @@ public class UIManager : MonoBehaviour
             _shopOpenedFromGame = false;
             if (_shopPanel != null) _shopPanel.SetActive(false);
             if (_hudCanvas != null) _hudCanvas.SetActive(true);
+            SaveLoadManager.Save(); // Lưu vàng/dữ liệu khi vừa rời Shop để an toàn
         }
         else
         {
@@ -147,6 +148,8 @@ public class UIManager : MonoBehaviour
     {
         // Bật lại sảnh chờ
         ShowPanel(_starterPanel);
+        
+        SaveLoadManager.Save(); // Lưu vàng kiếm được trong level vừa qua
 
         // Đổi background về sảnh
         if (_lobbyBackground != null) _lobbyBackground.SetActive(true);

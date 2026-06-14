@@ -11,9 +11,9 @@ public static class GameEvents
     public static event Action<PizzaPlate> OnPlatePlaceFailed;
     public static void TriggerPlatePlaceFailed(PizzaPlate plate) => OnPlatePlaceFailed?.Invoke(plate);
 
-    // Đĩa bánh nổ: Trả về loại pizza (int) và điểm số cộng thêm
-    public static event Action<int, int> OnPlateExploded;
-    public static void TriggerPlateExploded(int pizzaType, int scoreAdded) => OnPlateExploded?.Invoke(pizzaType, scoreAdded);
+    // Đĩa bánh nổ: Trả về loại pizza (int), điểm số cộng thêm (int), và vàng nhận được (int)
+    public static event Action<int, int, int> OnPlateExploded;
+    public static void TriggerPlateExploded(int pizzaType, int scoreAdded, int goldAdded) => OnPlateExploded?.Invoke(pizzaType, scoreAdded, goldAdded);
 
     // Đạt combo: Trả về số lượng chuỗi nổ (x2, x3...)
     public static event Action<int> OnComboAchieved;

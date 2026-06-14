@@ -47,7 +47,7 @@ public class LevelProgressUI : MonoBehaviour
         UpdateFillImage();
     }
 
-    private void HandlePlateExploded(int pizzaType, int score)
+    private void HandlePlateExploded(int pizzaType, int score, int gold)
     {
         _currentScore += score;
 
