@@ -35,6 +35,9 @@ public class GridManager : MonoBehaviour
     private readonly Dictionary<GridCell, int> _enqueueOrder = new Dictionary<GridCell, int>();
     private int _enqueueCounter = 0;
 
+    // Relay 2-step: cache đích relay để push đúng sau khi epicenter đầy tạm. Key = epicenter cell.
+    private readonly Dictionary<GridCell, (int type, GridCell dest)> _pendingRelays = new Dictionary<GridCell, (int, GridCell)>();
+
     private void EnqueueCell(GridCell cell)
     {
         if (cell == null || !cell.IsOccupied) return;
@@ -155,6 +158,7 @@ public class GridManager : MonoBehaviour
         _cellsInQueue.Clear();
         _enqueueOrder.Clear();
         _enqueueCounter = 0;
+        _pendingRelays.Clear();
     }
 
     private void OnEnable()
@@ -419,9 +423,33 @@ public class GridManager : MonoBehaviour
         // Phase 0: Đã tinh khiết 6/6 → Nổ
         if (centerPlate.IsFull() && centerPlate.IsFullAndPure())
         {
+            _pendingRelays.Remove(centerCell);
             ExplodePlate(centerCell);
             BezierTween.Instance.StartTween(centerCell.transform, centerCell.transform.position, arcHeight: 0, duration: 0.4f);
             return true;
+        }
+
+        // Phase 0.5: Relay 2-step — epicenter đang giữ slice relay từ lượt trước → push đúng đích
+        if (_pendingRelays.TryGetValue(centerCell, out var relayData))
+        {
+            int relayType = relayData.type;
+            GridCell relayDest = relayData.dest;
+            _pendingRelays.Remove(centerCell);
+
+            if (centerPlate.HasType(relayType) && relayDest != null && relayDest.IsOccupied && !relayDest.CurrentPlate.IsFull())
+            {
+                PizzaSliceVisual slice = centerPlate.RemoveSliceOfType(relayType);
+                if (slice != null)
+                {
+                    PizzaPlate destPlate = relayDest.CurrentPlate;
+                    destPlate.TryAddSlice(slice, out _);
+                    AnimateSliceFly(slice, destPlate);
+                    EnqueueCell(relayDest);
+                    EnqueueCell(centerCell);
+                    return true;
+                }
+            }
+            // Dest không còn hợp lệ → reset, rơi xuống logic thường
         }
 
         // Thu thập hàng xóm có đĩa
@@ -617,8 +645,12 @@ public class GridManager : MonoBehaviour
                 if (slice != null && centerPlate.TryAddSlice(slice, out _))
                 {
                     AnimateSliceFly(slice, centerPlate);
-                    // Sau khi hút xong, lần xử lý tiếp epicenter sẽ push type này sang dest
                     centerPlate.IsPurging = false;
+
+                    // Cache relay destination: lượt sau epicenter sẽ push ĐÚNG type này sang destCell
+                    // thay vì rơi vào TryPushMinoritySlice với scoring generic
+                    _pendingRelays[centerCell] = (type, destCell);
+
                     EnqueueCell(centerCell);
                     CleanupEmptyNeighbors(centerCell);
                     return true;
