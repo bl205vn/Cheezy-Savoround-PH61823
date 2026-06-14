@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class GridManager : MonoBehaviour
@@ -121,22 +122,32 @@ public class GridManager : MonoBehaviour
 
     private void ClearGrid()
     {
+        // Kill tất cả BezierTween đang chạy để tránh tween treo trên transform đã bị Destroy
+        if (BezierTween.Instance != null)
+        {
+            BezierTween.Instance.CancelAllTweens();
+        }
+
         foreach (var cell in _gridCells.Values)
         {
             if (cell != null)
             {
                 if (cell.CurrentPlate != null)
                 {
-                    cell.CurrentPlate.ClearSlices();
+                    cell.CurrentPlate.transform.DOKill(); // Kill shrink/scale tween trên plate
+                    cell.CurrentPlate.ClearSlices();       // ClearSlices đã DOKill từng slice
                     if (ObjectPoolManager.Instance != null)
                     {
                         ObjectPoolManager.Instance.ReturnPizzaPlate(cell.CurrentPlate);
                     }
                 }
+                cell.transform.DOKill(); // Kill explosion-arc tween trên cell
                 Destroy(cell.gameObject);
             }
         }
         _gridCells.Clear();
+        _cellsToProcess.Clear();
+        _cellsInQueue.Clear();
     }
 
     private void OnEnable()
@@ -430,6 +441,11 @@ public class GridManager : MonoBehaviour
                 bool pushed = TryTransitPushNonTarget(centerCell, centerPlate, selfExplodeType);
                 if (pushed) return true;
             }
+
+            // Đã xác định mục tiêu nổ nhưng kẹt (đĩa đầy hoặc thiếu hàng xóm)
+            // KHÔNG cho Relay ghi đè mục tiêu → chờ lượt sau khi tình hình thay đổi
+            CleanupEmptyNeighbors(centerCell);
+            return ProcessNextMerge();
         }
 
         // Phase 2: Relay - gom type cho hàng xóm
@@ -571,6 +587,10 @@ public class GridManager : MonoBehaviour
 
                 // Chỉ relay nếu src có ÍT hơn dest (di chuyển từ ít → nhiều)
                 if (srcPlate.GetCountOf(type) >= destPlate.GetCountOf(type)) continue;
+
+                // ANTI-BOUNCE: Nếu epicenter đang 5/6 và type relay không phải đa số,
+                // hút vào sẽ làm epicenter 6/6 không tinh khiết → IsPurging → tốn 1 vòng thừa
+                if (centerPlate.GetTotalSlices() == 5 && centerPlate.GetCountOf(type) != 5) continue;
 
                 // Hút từ src → epicenter (trung chuyển)
                 PizzaSliceVisual slice = srcPlate.RemoveSliceOfType(type);

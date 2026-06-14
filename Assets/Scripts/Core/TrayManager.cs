@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class TrayManager : MonoBehaviour
@@ -209,6 +210,7 @@ public class TrayManager : MonoBehaviour
             {
                 if (_slotPlates[i] != null)
                 {
+                    _slotPlates[i].transform.DOKill(); // Kill tween treo trước khi trả pool
                     _slotPlates[i].ClearSlices();
                     if (ObjectPoolManager.Instance != null)
                     {
