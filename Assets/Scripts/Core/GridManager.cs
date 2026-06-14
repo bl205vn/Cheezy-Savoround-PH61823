@@ -12,6 +12,10 @@ public class GridManager : MonoBehaviour
     [SerializeField] private Color _lightCellColor = new Color(0.9f, 0.85f, 0.7f); // Màu sáng (lẻ)
     [SerializeField] private Color _darkCellColor = new Color(0.55f, 0.5f, 0.35f);  // Màu tối hơn (chẵn)
 
+    [Header("Score Settings")]
+    [SerializeField] private int _scorePerExplosion = 100; // Có thể chỉnh điểm mỗi lần nổ đĩa tại đây
+
+
     // Dictionary lưu trạng thái các ô
     private Dictionary<Vector2Int, GridCell> _gridCells = new Dictionary<Vector2Int, GridCell>();
     private List<GridCell> _cellsToProcess = new List<GridCell>();
@@ -441,6 +445,8 @@ public class GridManager : MonoBehaviour
         return false;
     }
 
+    public static event System.Action<int> OnScoreAdded; // Sự kiện cộng điểm
+
     private void ExplodePlate(GridCell cell)
     {
         Debug.Log($"[Merge] NỔ ĐĨA tại {cell.GridPosition}! Giải phóng ô.");
@@ -460,12 +466,17 @@ public class GridManager : MonoBehaviour
             AudioManager.Instance.PlayExplosionSound();
         }
         
+        int scoreGained = _scorePerExplosion; // Dùng điểm cài đặt ở Inspector thay vì viết cứng
+        
         // --- CHẠY CHỮ ĐIỂM SỐ BAY LÊN ---
         FloatingText scoreText = ObjectPoolManager.Instance.GetFloatingText();
         if (scoreText != null)
         {
-            scoreText.Setup("+100", plate.transform.position + new Vector3(0, 1f, 0));
+            scoreText.Setup("+" + scoreGained, plate.transform.position + new Vector3(0, 1f, 0));
         }
+        
+        // Phát sự kiện cộng điểm cho LevelProgressUI nghe
+        OnScoreAdded?.Invoke(scoreGained);
      
         plate.ClearSlices(); // Trả pool miếng bánh
         

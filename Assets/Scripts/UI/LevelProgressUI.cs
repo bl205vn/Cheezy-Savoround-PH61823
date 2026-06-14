@@ -1,0 +1,104 @@
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class LevelProgressUI : MonoBehaviour
+{
+    [Header("UI References")]
+    [SerializeField] private Image _fillImage;           // Kéo Image 'Lapday' vào đây
+    [SerializeField] private TMP_Text _currentLevelText; // Kéo Text 'LevelBandau' vào đây
+    [SerializeField] private TMP_Text _nextLevelText;    // Kéo Text 'LevelKe' vào đây
+
+    [Header("Level Settings")]
+    [SerializeField] private int _scoreToNextLevel = 1000; // Số điểm cần thiết để lên level
+    
+    private int _currentScore = 0;
+
+    private void Start()
+    {
+        // Kiểm tra và khởi tạo cấp độ mặc định (fix lỗi file JSON cũ)
+        if (SaveLoadManager.Data != null && SaveLoadManager.Data.CurrentLevel <= 0)
+        {
+            SaveLoadManager.Data.CurrentLevel = 1;
+            SaveLoadManager.Save();
+        }
+        
+        InitializeUI();
+    }
+
+    private void OnEnable()
+    {
+        // Lắng nghe sự kiện cộng điểm từ GridManager (Event-driven, Zero-GC)
+        GridManager.OnScoreAdded += HandleScoreAdded;
+    }
+
+    private void OnDisable()
+    {
+        GridManager.OnScoreAdded -= HandleScoreAdded;
+    }
+
+    private void InitializeUI()
+    {
+        UpdateLevelTexts();
+        UpdateFillImage();
+    }
+
+    private void HandleScoreAdded(int score)
+    {
+        _currentScore += score;
+
+        if (_currentScore >= _scoreToNextLevel)
+        {
+            _currentScore -= _scoreToNextLevel; // Giữ lại điểm thừa cho cấp sau
+            LevelUp();
+        }
+
+        UpdateFillImage();
+    }
+
+    private void LevelUp()
+    {
+        if (SaveLoadManager.Data != null)
+        {
+            SaveLoadManager.Data.CurrentLevel++;
+            SaveLoadManager.Save();
+        }
+
+        UpdateLevelTexts();
+        
+        Debug.Log($"[LevelProgress] CHÚC MỪNG LÊN CẤP {SaveLoadManager.Data.CurrentLevel}!");
+        
+        // Optional: Có thể gọi âm thanh chúc mừng tại đây
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySuccessSound(); 
+        }
+    }
+
+    private void UpdateLevelTexts()
+    {
+        if (SaveLoadManager.Data != null)
+        {
+            int currentLevel = SaveLoadManager.Data.CurrentLevel;
+            
+            // Dùng SetText để tuân thủ luật Zero-GC Alloc của dự án
+            if (_currentLevelText != null) 
+                _currentLevelText.SetText("{0}", currentLevel);
+                
+            if (_nextLevelText != null) 
+                _nextLevelText.SetText("{0}", currentLevel + 1);
+        }
+    }
+
+    private void UpdateFillImage()
+    {
+        if (_fillImage != null)
+        {
+            // Tránh chia cho 0
+            float maxScore = Mathf.Max(1f, _scoreToNextLevel);
+            
+            // Tạm thời set trực tiếp. Nếu muốn mượt, có thể dùng Mathf.Lerp trong hàm Coroutine hoặc Tween
+            _fillImage.fillAmount = Mathf.Clamp01((float)_currentScore / maxScore);
+        }
+    }
+}

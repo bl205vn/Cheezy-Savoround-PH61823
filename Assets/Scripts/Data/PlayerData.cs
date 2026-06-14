@@ -11,11 +11,13 @@ public class PlayerData
     public List<AchievementSaveData> Achievements;
     public GameSettings Settings;
     public List<int> BoostersOwned; // Lưu số lượng của 4 loại Booster
+    public int CurrentLevel; // Cấp độ hiện tại của người chơi
     
     // Khởi tạo giá trị mặc định cho người chơi mới
     public PlayerData()
     {
         Gold = 0;
+        CurrentLevel = 1;
         UnlockedSkins = new List<string>() { "plate_01", "plate_02", "plate_03", "plate_04", "plate_05", "plate_06" };
         CurrentSkinId = "plate_01";
         LastDailyRewardTime = 0;

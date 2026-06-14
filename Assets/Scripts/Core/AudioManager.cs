@@ -12,6 +12,8 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip _placeClip;
     [Tooltip("Tiếng báo lỗi đặt sai ô (VD: wrong)")]
     [SerializeField] private AudioClip _errorClip;
+    [Tooltip("Tiếng chúc mừng / lên cấp (Success)")]
+    [SerializeField] private AudioClip _successClip;
     [SerializeField] private float _baseVolume = 1f;
 
     [Header("Pitch Shift (Hiệu ứng Combo)")]
@@ -76,6 +78,14 @@ public class AudioManager : MonoBehaviour
         if (_errorClip != null && _sfxSource != null)
         {
             _sfxSource.PlayOneShot(_errorClip, _baseVolume);
+        }
+    }
+
+    public void PlaySuccessSound()
+    {
+        if (_successClip != null && _sfxSource != null)
+        {
+            _sfxSource.PlayOneShot(_successClip, _baseVolume);
         }
     }
 }
