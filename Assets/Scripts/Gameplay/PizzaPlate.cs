@@ -48,6 +48,21 @@ public class PizzaPlate : MonoBehaviour
         ApplyCurrentSkin();
     }
 
+    private void OnEnable()
+    {
+        GameEvents.OnSkinChanged += HandleSkinChanged;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnSkinChanged -= HandleSkinChanged;
+    }
+
+    private void HandleSkinChanged(string skinId)
+    {
+        ApplyCurrentSkin();
+    }
+
     private void ApplyCurrentSkin()
     {
         if (_propBlock == null) _propBlock = new MaterialPropertyBlock();

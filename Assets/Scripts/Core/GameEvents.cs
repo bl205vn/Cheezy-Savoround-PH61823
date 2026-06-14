@@ -22,4 +22,8 @@ public static class GameEvents
     // Thua cuộc
     public static event Action OnGameOver;
     public static void TriggerGameOver() => OnGameOver?.Invoke();
+
+    // Thay đổi Skin đĩa
+    public static event Action<string> OnSkinChanged;
+    public static void TriggerSkinChanged(string newSkinId) => OnSkinChanged?.Invoke(newSkinId);
 }

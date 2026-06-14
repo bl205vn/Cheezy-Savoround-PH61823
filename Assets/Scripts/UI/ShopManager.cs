@@ -73,8 +73,17 @@ public class ShopManager : MonoBehaviour
 
     /// <summary>
     /// Chuyển đổi màu sắc của các Tab. Gắn hàm này vào nút bấm của từng Tab (truyền tham số 0, 1, 2)
+    /// Dành riêng cho Unity Event Inspector (chỉ nhận 1 tham số).
     /// </summary>
-    public void SwitchTab(int tabIndex, int itemIndex = 0)
+    public void SwitchTab(int tabIndex)
+    {
+        SwitchTabAndItem(tabIndex, 0);
+    }
+
+    /// <summary>
+    /// Gọi từ code khi cần nhảy tới một item cụ thể trong tab.
+    /// </summary>
+    public void SwitchTabAndItem(int tabIndex, int itemIndex)
     {
         if (_tabImages == null) return;
 
@@ -397,6 +406,7 @@ public class ShopManager : MonoBehaviour
                 // Trang bị
                 SaveLoadManager.Data.CurrentSkinId = skinData.Id;
                 SaveLoadManager.Save();
+                GameEvents.TriggerSkinChanged(skinData.Id); // Trigger thay đổi skin tức thời
                 UpdateActionUI();
                 Debug.Log($"[Shop] Đã trang bị skin: {skinData.Id}");
             }
@@ -410,6 +420,7 @@ public class ShopManager : MonoBehaviour
                     SaveLoadManager.Data.CurrentSkinId = skinData.Id;
                     
                     SaveLoadManager.Save();
+                    GameEvents.TriggerSkinChanged(skinData.Id); // Trigger thay đổi skin tức thời
                     UpdateActionUI();
                     UpdateGoldText();
                     Debug.Log($"[Shop] Mua thành công skin: {skinData.Id}");

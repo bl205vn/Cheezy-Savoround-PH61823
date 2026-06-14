@@ -66,7 +66,7 @@ public class BoostButton : MonoBehaviour
             // Hết boost → Mở Shop ở Tab Boost, nhảy thẳng tới đúng loại Boost
             if (UIManager.Instance != null)
             {
-                UIManager.Instance.OpenShopFromGame(0, (int)_boosterType); // Tab 0 = Boost, item = loại boost
+                UIManager.Instance.OpenShopFromGameWithItem(0, (int)_boosterType); // Tab 0 = Boost, item = loại boost
             }
         }
     }

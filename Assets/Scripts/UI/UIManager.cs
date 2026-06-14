@@ -64,10 +64,19 @@ public class UIManager : MonoBehaviour
     public void BackToStarter() => ShowPanel(_starterPanel);
 
     /// <summary>
-    /// Mở Shop overlay ngay giữa game, nhảy vào Tab và Item chỉ định.
-    /// Gọi từ code: UIManager.Instance.OpenShopFromGame(tabIndex, itemIndex)
+    /// Gọi từ code: UIManager.Instance.OpenShopFromGame(tabIndex)
+    /// Dành riêng cho Unity Event Inspector.
     /// </summary>
-    public void OpenShopFromGame(int tabIndex, int itemIndex = 0)
+    public void OpenShopFromGame(int tabIndex)
+    {
+        OpenShopFromGameWithItem(tabIndex, 0);
+    }
+
+    /// <summary>
+    /// Mở Shop overlay ngay giữa game, nhảy vào Tab và Item chỉ định.
+    /// Gọi từ code: UIManager.Instance.OpenShopFromGameWithItem(tabIndex, itemIndex)
+    /// </summary>
+    public void OpenShopFromGameWithItem(int tabIndex, int itemIndex)
     {
         _shopOpenedFromGame = true;
 
@@ -78,7 +87,7 @@ public class UIManager : MonoBehaviour
         if (_shopPanel != null) _shopPanel.SetActive(true);
 
         // Chuyển sang Tab + Item chỉ định (0: Boost, 1: Coin, 2: Skin)
-        if (_shopManager != null) _shopManager.SwitchTab(tabIndex, itemIndex);
+        if (_shopManager != null) _shopManager.SwitchTabAndItem(tabIndex, itemIndex);
     }
 
     /// <summary>
