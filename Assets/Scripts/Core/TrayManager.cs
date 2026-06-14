@@ -202,16 +202,24 @@ public class TrayManager : MonoBehaviour
 
     private void ClearTray()
     {
-        // Xóa tham chiếu đĩa
+        // Trả đĩa về Pool trước khi xóa
         if (_slotPlates != null)
         {
             for (int i = 0; i < _slotPlates.Length; i++)
             {
-                _slotPlates[i] = null;
+                if (_slotPlates[i] != null)
+                {
+                    _slotPlates[i].ClearSlices();
+                    if (ObjectPoolManager.Instance != null)
+                    {
+                        ObjectPoolManager.Instance.ReturnPizzaPlate(_slotPlates[i]);
+                    }
+                    _slotPlates[i] = null;
+                }
             }
         }
 
-        // Hủy anchor (và đĩa con theo hierarchy)
+        // Hủy anchor
         foreach (var anchor in _slotAnchors)
         {
             if (anchor != null)

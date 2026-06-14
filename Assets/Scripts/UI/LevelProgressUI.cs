@@ -66,6 +66,12 @@ public class LevelProgressUI : MonoBehaviour
 
         UpdateLevelTexts();
         
+        // Load lại grid và thông số của màn mới từ JSON
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.LoadNextLevel();
+        }
+        
         Debug.Log($"[LevelProgress] CHÚC MỪNG LÊN CẤP {SaveLoadManager.Data.CurrentLevel}!");
         
         // Optional: Có thể gọi âm thanh chúc mừng tại đây

@@ -120,6 +120,14 @@ public class GridManager : MonoBehaviour
         {
             if (cell != null)
             {
+                if (cell.CurrentPlate != null)
+                {
+                    cell.CurrentPlate.ClearSlices();
+                    if (ObjectPoolManager.Instance != null)
+                    {
+                        ObjectPoolManager.Instance.ReturnPizzaPlate(cell.CurrentPlate);
+                    }
+                }
                 Destroy(cell.gameObject);
             }
         }
@@ -618,29 +626,60 @@ public class GridManager : MonoBehaviour
             if (!kvp.Value.IsOccupied) return false;
         }
 
-        // Điều kiện 2: Không còn nước merge hợp lệ
+        // Điều kiện 2: Kiểm tra xem có bất kỳ đĩa nào có thể Hút (Pull) hoặc Đẩy (Push) theo đúng logic game không
         foreach (var kvp in _gridCells)
         {
             GridCell cell = kvp.Value;
             if (!cell.IsOccupied) continue;
 
             PizzaPlate plateA = cell.CurrentPlate;
-            if (plateA.IsFull()) continue;
 
-            foreach (var dir in _directions)
+            // XÉT TRƯỜNG HỢP PUSH (Đẩy rác khi đĩa đầy nhưng không tinh khiết)
+            if (plateA.IsFull() && !plateA.IsFullAndPure())
             {
-                GridCell neighbor = GetCell(cell.GridPosition + dir);
-                if (neighbor == null || !neighbor.IsOccupied) continue;
+                int pushType = plateA.GetMinorityType(-1);
+                if (pushType != -1)
+                {
+                    foreach (var dir in _directions)
+                    {
+                        GridCell neighbor = GetCell(cell.GridPosition + dir);
+                        if (neighbor != null && neighbor.IsOccupied)
+                        {
+                            PizzaPlate plateB = neighbor.CurrentPlate;
+                            if (!plateB.IsFull())
+                            {
+                                // Luật chống dội rác (Bounce Loop)
+                                if (!(plateB.GetTotalSlices() == 5 && plateB.GetCountOf(pushType) != 5))
+                                {
+                                    return false; // Có thể đẩy rác -> Chưa Game Over
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-                PizzaPlate plateB = neighbor.CurrentPlate;
-
-                // Dùng buffer cache thay vì tạo List mới → Zero GC
+            // XÉT TRƯỜNG HỢP PULL (Hút bánh cùng loại)
+            if (!plateA.IsFull())
+            {
                 _gameOverTypeBuffer.Clear();
                 _gameOverTypeBuffer.AddRange(plateA.GetAvailableTypes());
 
-                foreach (int t in _gameOverTypeBuffer)
+                foreach (var dir in _directions)
                 {
-                    if (plateB.HasType(t)) return false; // Còn nước đi
+                    GridCell neighbor = GetCell(cell.GridPosition + dir);
+                    if (neighbor != null && neighbor.IsOccupied)
+                    {
+                        PizzaPlate plateB = neighbor.CurrentPlate;
+                        foreach (int t in _gameOverTypeBuffer)
+                        {
+                            if (plateB.HasType(t))
+                            {
+                                // Nếu cả 2 đều có cùng loại bánh, và plateA không đầy -> Sẽ có giao dịch Hút
+                                return false; // Còn nước đi -> Chưa Game Over
+                            }
+                        }
+                    }
                 }
             }
         }

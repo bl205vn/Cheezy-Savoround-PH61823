@@ -2,27 +2,48 @@ using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
+    public static LevelManager Instance { get; private set; }
     public static LevelData CurrentLevelData { get; private set; }
 
     [SerializeField] private GridManager _gridManager;
     [SerializeField] private TrayManager _trayManager;
     
-    [Header("Testing")]
-    [SerializeField] private TextAsset _testLevelJson; // Kéo file JSON vào đây để test trực tiếp
-    
     [Header("Debug")]
-    [SerializeField] private bool _showDebugGizmos = false; // Tích để hiện đường Gizmo trong Scene
+    [Tooltip("Bật để sử dụng file Test và vẽ Gizmos")]
+    [SerializeField] private bool _enableDebug = false; 
+    [SerializeField] private TextAsset _testLevelJson; 
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
 
     private void Start()
     {
-        if (_testLevelJson != null)
+        if (_enableDebug && _testLevelJson != null)
         {
             LoadFromTextAsset(_testLevelJson);
         }
         else
         {
-            LoadLevel(1); // Mặc định load màn 1
+            // Liên kết file Save với Level Loading
+            int currentLevel = SaveLoadManager.Data != null ? SaveLoadManager.Data.CurrentLevel : 1;
+            if (currentLevel > 30) currentLevel = 30; // Tạm giới hạn 30 level
+            LoadLevel(currentLevel); 
         }
+    }
+
+    public void LoadNextLevel()
+    {
+        int nextLevel = SaveLoadManager.Data != null ? SaveLoadManager.Data.CurrentLevel : 1;
+        if (nextLevel > 30) nextLevel = 30;
+        
+        LoadLevel(nextLevel);
     }
 
     public void LoadLevel(int levelId)
@@ -63,7 +84,7 @@ public class LevelManager : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
-        if (!_showDebugGizmos) return;
+        if (!_enableDebug) return;
         
         // Preview level trong Editor mà không cần Play
         if (_testLevelJson != null && _gridManager != null && _trayManager != null)

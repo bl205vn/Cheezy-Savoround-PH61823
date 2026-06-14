@@ -29,7 +29,15 @@ public class CheckingComboState : IGameState
             }
             else
             {
-                GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
+                // Kiểm tra Game Over ngay sau khi xử lý xong toàn bộ combo trên lưới
+                if (GridManager.Instance != null && GridManager.Instance.CheckGameOver())
+                {
+                    GameStateManager.Instance.TriggerGameOver();
+                }
+                else
+                {
+                    GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
+                }
             }
         }
     }
