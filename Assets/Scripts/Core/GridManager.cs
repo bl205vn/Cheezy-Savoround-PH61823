@@ -24,6 +24,11 @@ public class GridManager : MonoBehaviour
     
     // Cache buffer để tránh GC alloc trong gameplay loop
     private readonly List<int> _gameOverTypeBuffer = new List<int>();
+    
+    // Cache buffer cho Transit Station (Epicenter relay logic)
+    private readonly List<GridCell> _transitNeighbors = new List<GridCell>();
+    private readonly Dictionary<int, int> _typeGlobalCount = new Dictionary<int, int>(); // type → tổng số miếng toàn vùng
+    private readonly Dictionary<int, GridCell> _typeBestNeighbor = new Dictionary<int, GridCell>(); // type → đĩa hàng xóm có nhiều nhất
 
     private void EnqueueCell(GridCell cell)
     {
@@ -232,6 +237,13 @@ public class GridManager : MonoBehaviour
         if (centerCell == null || !centerCell.IsOccupied) return ProcessNextMerge();
 
         PizzaPlate centerPlate = centerCell.CurrentPlate;
+
+        // Đĩa tâm chấn (Priority 9) → Trạm Trung Chuyển thông minh
+        if (centerPlate.Priority == 9)
+        {
+            return ProcessAsTransitStation(centerCell, centerPlate);
+        }
+
         if (centerPlate.IsFull())
         {
             if (centerPlate.IsFullAndPure())
@@ -373,10 +385,290 @@ public class GridManager : MonoBehaviour
         }
     }
 
+    // ========================================================================
+    // TRANSIT STATION: Đĩa tâm chấn (Priority 9) hoạt động như trạm trung chuyển
+    // Phase 1: Tự nổ? Quét tổng type, nếu gom đủ 6 → hút về nổ
+    // Phase 2: Relay - giúp hàng xóm gom tinh khiết
+    // Phase 3: Push minority (cần >= 2 hàng xóm, tránh bounce loop)
+    // ========================================================================
+
+    private bool ProcessAsTransitStation(GridCell centerCell, PizzaPlate centerPlate)
+    {
+        // Phase 0: Đã tinh khiết 6/6 → Nổ
+        if (centerPlate.IsFull() && centerPlate.IsFullAndPure())
+        {
+            ExplodePlate(centerCell);
+            BezierTween.Instance.StartTween(centerCell.transform, centerCell.transform.position, arcHeight: 0, duration: 0.4f);
+            return true;
+        }
+
+        // Thu thập hàng xóm có đĩa
+        _transitNeighbors.Clear();
+        foreach (var dir in _directions)
+        {
+            GridCell n = GetCell(centerCell.GridPosition + dir);
+            if (n != null && n.IsOccupied) _transitNeighbors.Add(n);
+        }
+        if (_transitNeighbors.Count == 0) return ProcessNextMerge();
+
+        // Xây bản đồ: type → tổng miếng (epicenter + hàng xóm) & hàng xóm giàu nhất
+        _typeGlobalCount.Clear();
+        _typeBestNeighbor.Clear();
+        BuildTypeInventory(centerPlate, _transitNeighbors);
+
+        // Phase 1: Tự nổ? Tìm type gom đủ 6 cho epicenter
+        int selfExplodeType = FindSelfExplodeType(centerPlate);
+        if (selfExplodeType != -1)
+        {
+            // Hút type mục tiêu từ hàng xóm
+            bool pulled = TryTransitPull(centerCell, centerPlate, selfExplodeType);
+            if (pulled) return true;
+
+            // Đẩy type KHÔNG phải mục tiêu ra (cần >= 2 hàng xóm)
+            if (_transitNeighbors.Count >= 2 && centerPlate.GetAvailableTypes().Count > 1)
+            {
+                bool pushed = TryTransitPushNonTarget(centerCell, centerPlate, selfExplodeType);
+                if (pushed) return true;
+            }
+        }
+
+        // Phase 2: Relay - gom type cho hàng xóm
+        bool relayed = TryRelayForNeighbors(centerCell, centerPlate);
+        if (relayed) return true;
+
+        // Phase 3: Hút thường (như logic cũ cho non-epicenter)
+        bool normalPull = TryStandardPull(centerCell, centerPlate);
+        if (normalPull) return true;
+
+        // Phase 4: Push minority nếu đầy mà bẩn (cần >= 2 hàng xóm)
+        if (centerPlate.IsFull() && !centerPlate.IsFullAndPure() && _transitNeighbors.Count >= 2)
+        {
+            bool pushed = TryPushMinoritySlice(centerCell, centerPlate);
+            if (pushed) return true;
+        }
+
+        // Dọn đĩa rỗng
+        CleanupEmptyNeighbors(centerCell);
+        return ProcessNextMerge();
+    }
+
+    private void BuildTypeInventory(PizzaPlate centerPlate, List<GridCell> neighbors)
+    {
+        // Đếm trên epicenter
+        foreach (int t in centerPlate.GetAvailableTypes())
+        {
+            _typeGlobalCount[t] = centerPlate.GetCountOf(t);
+        }
+        // Đếm trên hàng xóm & tìm hàng xóm giàu nhất mỗi type
+        foreach (var nc in neighbors)
+        {
+            PizzaPlate np = nc.CurrentPlate;
+            foreach (int t in np.GetAvailableTypes())
+            {
+                int count = np.GetCountOf(t);
+                if (_typeGlobalCount.ContainsKey(t))
+                    _typeGlobalCount[t] += count;
+                else
+                    _typeGlobalCount[t] = count;
+
+                if (!_typeBestNeighbor.ContainsKey(t) || count > _typeBestNeighbor[t].CurrentPlate.GetCountOf(t))
+                {
+                    _typeBestNeighbor[t] = nc;
+                }
+            }
+        }
+    }
+
+    private int FindSelfExplodeType(PizzaPlate centerPlate)
+    {
+        int bestType = -1;
+        int bestCenterCount = 0;
+        foreach (var kvp in _typeGlobalCount)
+        {
+            if (kvp.Value >= 6 && centerPlate.HasType(kvp.Key))
+            {
+                int cc = centerPlate.GetCountOf(kvp.Key);
+                if (cc > bestCenterCount) { bestType = kvp.Key; bestCenterCount = cc; }
+            }
+        }
+        return bestType;
+    }
+
+    private bool TryTransitPull(GridCell centerCell, PizzaPlate centerPlate, int targetType)
+    {
+        if (centerPlate.IsFull()) return false;
+        foreach (var nc in _transitNeighbors)
+        {
+            PizzaPlate np = nc.CurrentPlate;
+            if (!np.HasType(targetType)) continue;
+
+            PizzaSliceVisual slice = np.RemoveSliceOfType(targetType);
+            if (slice != null && centerPlate.TryAddSlice(slice, out _))
+            {
+                AnimateSliceFly(slice, centerPlate);
+                EnqueueCell(centerCell);
+                CleanupEmptyNeighbors(centerCell);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool TryTransitPushNonTarget(GridCell centerCell, PizzaPlate centerPlate, int targetType)
+    {
+        // Tìm type KHÔNG phải mục tiêu để đẩy ra
+        List<int> types = centerPlate.GetAvailableTypes();
+        foreach (int t in types)
+        {
+            if (t == targetType) continue;
+            // Tìm hàng xóm tốt nhất để nhận type này
+            GridCell bestDest = null;
+            int bestScore = int.MaxValue;
+            foreach (var nc in _transitNeighbors)
+            {
+                PizzaPlate np = nc.CurrentPlate;
+                if (np.IsFull()) continue;
+                int countOnN = np.GetCountOf(t);
+                int score = (countOnN > 0) ? (10 - countOnN) : (100 + np.GetTotalSlices());
+                if (score < bestScore) { bestScore = score; bestDest = nc; }
+            }
+            if (bestDest != null)
+            {
+                PizzaSliceVisual slice = centerPlate.RemoveSliceOfType(t);
+                if (slice != null)
+                {
+                    PizzaPlate destPlate = bestDest.CurrentPlate;
+                    destPlate.TryAddSlice(slice, out _);
+                    AnimateSliceFly(slice, destPlate);
+                    EnqueueCell(bestDest);
+                    EnqueueCell(centerCell);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private bool TryRelayForNeighbors(GridCell centerCell, PizzaPlate centerPlate)
+    {
+        if (_transitNeighbors.Count < 2) return false;
+        if (centerPlate.IsFull()) return false;
+
+        // Với mỗi type, tìm hàng xóm có ÍT nhất type đó (source) và hàng xóm có NHIỀU nhất (dest)
+        foreach (var kvp in _typeBestNeighbor)
+        {
+            int type = kvp.Key;
+            GridCell destCell = kvp.Value;
+            PizzaPlate destPlate = destCell.CurrentPlate;
+            if (destPlate.IsFull()) continue;
+
+            // Tìm hàng xóm khác có type này nhưng ÍT hơn (source - "lạc chỗ")
+            foreach (var nc in _transitNeighbors)
+            {
+                if (nc == destCell) continue;
+                PizzaPlate srcPlate = nc.CurrentPlate;
+                if (!srcPlate.HasType(type)) continue;
+
+                // Chỉ relay nếu src có ÍT hơn dest (di chuyển từ ít → nhiều)
+                if (srcPlate.GetCountOf(type) >= destPlate.GetCountOf(type)) continue;
+
+                // Hút từ src → epicenter (trung chuyển)
+                PizzaSliceVisual slice = srcPlate.RemoveSliceOfType(type);
+                if (slice != null && centerPlate.TryAddSlice(slice, out _))
+                {
+                    AnimateSliceFly(slice, centerPlate);
+                    // Sau khi hút xong, lần xử lý tiếp epicenter sẽ push type này sang dest
+                    centerPlate.IsPurging = false;
+                    EnqueueCell(centerCell);
+                    CleanupEmptyNeighbors(centerCell);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private bool TryStandardPull(GridCell centerCell, PizzaPlate centerPlate)
+    {
+        if (centerPlate.IsFull()) return false;
+        List<int> centerTypes = centerPlate.GetAvailableTypes();
+        if (centerTypes.Count == 0) return false;
+
+        // Anti-bounce: đĩa 5/6 chỉ hút loại đa số
+        if (centerPlate.GetTotalSlices() == 5)
+        {
+            int majorityType = centerTypes[0];
+            centerTypes.Clear();
+            centerTypes.Add(majorityType);
+        }
+
+        foreach (int pullType in centerTypes)
+        {
+            if (centerPlate.IsFull()) break;
+            foreach (var dir in _directions)
+            {
+                GridCell neighbor = GetCell(centerCell.GridPosition + dir);
+                if (neighbor == null || !neighbor.IsOccupied) continue;
+                PizzaPlate np = neighbor.CurrentPlate;
+                if (!np.HasType(pullType)) continue;
+
+                bool canPull = centerPlate.Priority > np.Priority
+                    || centerPlate.GetCountOf(pullType) > np.GetCountOf(pullType);
+                if (canPull)
+                {
+                    PizzaSliceVisual slice = np.RemoveSliceOfType(pullType);
+                    if (slice != null && centerPlate.TryAddSlice(slice, out _))
+                    {
+                        AnimateSliceFly(slice, centerPlate);
+                        EnqueueCell(centerCell);
+                        CleanupEmptyNeighbors(centerCell);
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private void AnimateSliceFly(PizzaSliceVisual slice, PizzaPlate targetPlate)
+    {
+        Vector3 targetPos = targetPlate.transform.position + new Vector3(0, targetPlate.SliceYOffset, 0);
+        float flyDuration = Mathf.Max(0.08f, 0.25f - (_mergeSequenceCount * 0.02f));
+        _mergeSequenceCount++;
+        BezierTween.Instance.StartTween(slice.transform, targetPos, arcHeight: 1.5f, duration: flyDuration, onComplete: (t) => {
+            slice.transform.localPosition = new Vector3(0, targetPlate.SliceYOffset, 0);
+        });
+    }
+
+    private void CleanupEmptyNeighbors(GridCell centerCell)
+    {
+        foreach (var dir in _directions)
+        {
+            GridCell neighbor = GetCell(centerCell.GridPosition + dir);
+            if (neighbor != null && neighbor.IsOccupied && neighbor.CurrentPlate.GetTotalSlices() == 0)
+            {
+                if (neighbor.CurrentPlate.Priority == 9) continue;
+                neighbor.CurrentPlate.PlayShrinkAndReturn();
+                neighbor.ClearPlate();
+            }
+        }
+    }
+
     private bool TryPushMinoritySlice(GridCell centerCell, PizzaPlate centerPlate)
     {
         int pushType = centerPlate.GetMinorityType(-1);
         if (pushType == -1) return false;
+
+        // ANTI-LOOP GUARD: Đếm hàng xóm có đĩa. 
+        // Nếu chỉ có 1 đĩa cạnh → push xong nó dội ngược lại → lặp vô hạn.
+        // Cần >= 2 hàng xóm để có chỗ tráo đổi mà không bị dội.
+        int occupiedNeighborCount = 0;
+        foreach (var dir in _directions)
+        {
+            GridCell n = GetCell(centerCell.GridPosition + dir);
+            if (n != null && n.IsOccupied) occupiedNeighborCount++;
+        }
+        if (occupiedNeighborCount <= 1) return false;
 
         GridCell bestPushNeighbor = null;
         int bestPushScore = int.MaxValue;
