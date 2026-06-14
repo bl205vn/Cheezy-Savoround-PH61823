@@ -87,4 +87,22 @@ public class GameStateManager : MonoBehaviour
         ChangeState(GameOver);
         GameEvents.TriggerGameOver();
     }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        // Khi người chơi vuốt ra màn hình chính, vuốt control center, hoặc có cuộc gọi tới
+        // pauseStatus = true tức là App bị đẩy xuống chạy ngầm (Background)
+        if (pauseStatus)
+        {
+            SaveLoadManager.Save();
+            Debug.Log("[FSM] Ứng dụng đưa vào nền (Background). Đã kích hoạt lưu tiến trình tự động.");
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        // Khi người chơi đóng hoàn toàn ứng dụng (Kill Task)
+        SaveLoadManager.Save();
+        Debug.Log("[FSM] Ứng dụng chuẩn bị tắt. Đã kích hoạt lưu tiến trình tự động.");
+    }
 }

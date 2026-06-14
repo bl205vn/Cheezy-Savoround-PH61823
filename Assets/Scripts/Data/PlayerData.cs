@@ -19,7 +19,7 @@ public class PlayerData
     {
         Gold = 0;
         CurrentLevel = 1;
-        UnlockedSkins = new List<string>() { "plate_01", "plate_02", "plate_03", "plate_04", "plate_05", "plate_06" };
+        UnlockedSkins = new List<string>() { "plate_01" }; // Chỉ mở khoá skin mặc định cho người chơi mới
         CurrentSkinId = "plate_01";
         LastDailyRewardTime = 0;
         Achievements = new List<AchievementSaveData>();
