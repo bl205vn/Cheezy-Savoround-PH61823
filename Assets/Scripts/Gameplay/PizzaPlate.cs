@@ -490,12 +490,40 @@ public class PizzaPlate : MonoBehaviour
 
         float angleStep = 360f / maxSlices;
 
+        // Random type cho từng slice trước, lưu vào buffer tạm để kiểm tra full-pure
+        int[] selectedTypes = new int[sliceCount];
         for (int i = 0; i < sliceCount; i++)
         {
-            // Data-driven: Random dựa trên list cho phép của Level hiện tại
             int randomTypeIndex = Random.Range(0, availableTypes.Length);
-            int selectedType = availableTypes[randomTypeIndex];
+            selectedTypes[i] = availableTypes[randomTypeIndex];
+        }
 
+        // ANTI-INSTANT-EXPLODE: Nếu sinh ra đầy 6/6 VÀ tất cả cùng 1 type → ép đổi 1 miếng sang type khác
+        if (sliceCount == maxSlices && availableTypes.Length > 1)
+        {
+            bool allSame = true;
+            for (int i = 1; i < sliceCount; i++)
+            {
+                if (selectedTypes[i] != selectedTypes[0]) { allSame = false; break; }
+            }
+
+            if (allSame)
+            {
+                int originalType = selectedTypes[0];
+                int newType;
+                do
+                {
+                    newType = availableTypes[Random.Range(0, availableTypes.Length)];
+                } while (newType == originalType);
+
+                // Đổi 1 miếng ngẫu nhiên (không phải miếng đầu, tránh pattern dễ đoán)
+                int swapIndex = Random.Range(0, sliceCount);
+                selectedTypes[swapIndex] = newType;
+            }
+        }
+
+        for (int i = 0; i < sliceCount; i++)
+        {
             // Kéo trực tiếp Component visual từ Pool (Zero GC)
             PizzaSliceVisual slice = ObjectPoolManager.Instance.GetPizzaSlice();
             
@@ -505,7 +533,7 @@ public class PizzaPlate : MonoBehaviour
             slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
             slice.transform.localScale = Vector3.one; // Ép lại scale chuẩn
             
-            slice.SetVisual(selectedType);
+            slice.SetVisual(selectedTypes[i]);
 
             _slices[i] = slice;
         }

@@ -14,6 +14,8 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip _errorClip;
     [Tooltip("Tiếng chúc mừng / lên cấp (Success)")]
     [SerializeField] private AudioClip _successClip;
+    [Tooltip("Tiếng thưởng Combo")]
+    [SerializeField] private AudioClip _comboClip;
     [SerializeField] private float _baseVolume = 1f;
 
     [Header("Pitch Shift (Hiệu ứng Combo)")]
@@ -57,7 +59,18 @@ public class AudioManager : MonoBehaviour
 
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell) => PlayPlaceSound();
     private void HandlePlatePlaceFailed(PizzaPlate plate) => PlayErrorSound();
-    private void HandlePlateExploded(int pizzaType, int scoreAdded) => PlayExplosionSound();
+    private void HandlePlateExploded(int pizzaType, int scoreAdded) 
+    {
+        // Tận dụng lỗi thành tính năng: Nếu type == -1 (tức là bonus từ Combo), phát tiếng Combo riêng biệt
+        if (pizzaType == -1)
+        {
+            PlayComboSound();
+        }
+        else
+        {
+            PlayExplosionSound();
+        }
+    }
 
     public void PlayExplosionSound()
     {
@@ -104,6 +117,14 @@ public class AudioManager : MonoBehaviour
         if (_successClip != null && _sfxSource != null)
         {
             _sfxSource.PlayOneShot(_successClip, _baseVolume);
+        }
+    }
+
+    public void PlayComboSound()
+    {
+        if (_comboClip != null && _sfxSource != null)
+        {
+            _sfxSource.PlayOneShot(_comboClip, _baseVolume);
         }
     }
 }
