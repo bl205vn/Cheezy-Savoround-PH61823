@@ -8,8 +8,6 @@ public struct ShopCategory
     public Sprite BoardSprite;          // Nền bảng to (Asset 44, 54, 62)
     public Sprite PriceBoardSprite;     // Nền bảng giá (Asset 45/46 hoặc 56)
     public Sprite ItemBackgroundSprite; // Nền lót vật phẩm (Asset 47, 55)
-    public bool Use3DModel;             // Tích vào True cho Tab Skin
-    public Sprite[] ItemSprites;        // Các vật phẩm trong tab này (chỉ dùng cho 2D)
 }
 
 public class ShopManager : MonoBehaviour
@@ -30,6 +28,7 @@ public class ShopManager : MonoBehaviour
     [Header("UI Item References")]
     [SerializeField] private Image _mainBoosterImage; // Kéo object 'Item' vào đây (Hình vật phẩm)
     [SerializeField] private TextMeshProUGUI _quantityText; // Kéo object 'SoLuong' vào đây
+    [SerializeField] private TextMeshProUGUI _coinRewardText; // Kéo object 'GIaTIenTuoi' vào đây
 
     [Header("Indicators (Dấu chấm)")]
     [SerializeField] private Image[] _indicatorImages; // Kéo 4 cái Hienthio vào đây
@@ -109,7 +108,7 @@ public class ShopManager : MonoBehaviour
                 _itemBackgroundImage.sprite = category.ItemBackgroundSprite;
 
             // Xử lý bật/tắt 3D Model hoặc 2D Image
-            if (category.Use3DModel)
+            if (_currentTabIndex == 2) // Tab Skin dùng 3D Model
             {
                 if (_mainBoosterImage != null) _mainBoosterImage.gameObject.SetActive(false);
                 if (_modelSpawnPoint != null) _modelSpawnPoint.gameObject.SetActive(true);
@@ -144,33 +143,25 @@ public class ShopManager : MonoBehaviour
         UpdateUI();
     }
 
+    private int GetCurrentMaxItems()
+    {
+        if (_shopConfig == null) return 0;
+        if (_currentTabIndex == 0 && _shopConfig.Boosters != null) return _shopConfig.Boosters.Length;
+        if (_currentTabIndex == 1 && _shopConfig.CoinPacks != null) return _shopConfig.CoinPacks.Length;
+        if (_currentTabIndex == 2 && _shopConfig.Skins != null) return _shopConfig.Skins.Length;
+        return 0;
+    }
+
     /// <summary>
     /// Gắn hàm này vào OnClick của nút Mũi Tên Phải
     /// </summary>
     public void NextItem()
     {
-        if (_categories == null || _categories.Length <= _currentTabIndex) return;
-        var category = _categories[_currentTabIndex];
-
-        int maxCount = 0;
-        if (category.Use3DModel)
-        {
-            if (_shopConfig == null || _shopConfig.Skins == null) return;
-            maxCount = _shopConfig.Skins.Length;
-        }
-        else
-        {
-            if (category.ItemSprites == null) return;
-            maxCount = category.ItemSprites.Length;
-        }
-
+        int maxCount = GetCurrentMaxItems();
         if (maxCount == 0) return;
 
         _currentIndex++;
-        if (_currentIndex >= maxCount)
-        {
-            _currentIndex = 0; // Quay vòng lại đầu
-        }
+        if (_currentIndex >= maxCount) _currentIndex = 0; // Quay vòng lại đầu
         UpdateUI();
     }
 
@@ -179,28 +170,11 @@ public class ShopManager : MonoBehaviour
     /// </summary>
     public void PrevItem()
     {
-        if (_categories == null || _categories.Length <= _currentTabIndex) return;
-        var category = _categories[_currentTabIndex];
-
-        int maxCount = 0;
-        if (category.Use3DModel)
-        {
-            if (_shopConfig == null || _shopConfig.Skins == null) return;
-            maxCount = _shopConfig.Skins.Length;
-        }
-        else
-        {
-            if (category.ItemSprites == null) return;
-            maxCount = category.ItemSprites.Length;
-        }
-
+        int maxCount = GetCurrentMaxItems();
         if (maxCount == 0) return;
 
         _currentIndex--;
-        if (_currentIndex < 0)
-        {
-            _currentIndex = maxCount - 1; // Quay vòng về cuối
-        }
+        if (_currentIndex < 0) _currentIndex = maxCount - 1; // Quay vòng về cuối
         UpdateUI();
     }
 
@@ -224,29 +198,31 @@ public class ShopManager : MonoBehaviour
         var category = _categories[_currentTabIndex];
 
         // 1. Thay đổi hình ảnh vật phẩm ở giữa (2D hoặc 3D)
-        if (category.Use3DModel)
+        if (_currentTabIndex == 2) // Skin
         {
             if (_shopConfig != null && _shopConfig.Skins != null && _shopConfig.Skins.Length > 0 && _previewPlate != null)
             {
                 var skinData = _shopConfig.Skins[_currentIndex];
-                if (skinData != null)
-                {
-                    _previewPlate.ApplySkinDirectly(skinData.Texture);
-                }
+                if (skinData != null) _previewPlate.ApplySkinDirectly(skinData.Texture);
             }
         }
-        else
+        else if (_currentTabIndex == 0) // Boost
         {
-            if (category.ItemSprites != null && category.ItemSprites.Length > 0 && _mainBoosterImage != null)
+            if (_shopConfig != null && _shopConfig.Boosters != null && _shopConfig.Boosters.Length > 0 && _mainBoosterImage != null)
             {
-                _mainBoosterImage.sprite = category.ItemSprites[_currentIndex];
+                _mainBoosterImage.sprite = _shopConfig.Boosters[_currentIndex].Icon;
+            }
+        }
+        else if (_currentTabIndex == 1) // Coin
+        {
+            if (_shopConfig != null && _shopConfig.CoinPacks != null && _shopConfig.CoinPacks.Length > 0 && _mainBoosterImage != null)
+            {
+                _mainBoosterImage.sprite = _shopConfig.CoinPacks[_currentIndex].Icon;
             }
         }
 
         // 2. Thay đổi trạng thái các dấu chấm (Indicator)
-        int currentMaxItems = category.Use3DModel ? 
-            (_shopConfig != null && _shopConfig.Skins != null ? _shopConfig.Skins.Length : 0) : 
-            (category.ItemSprites != null ? category.ItemSprites.Length : 0);
+        int currentMaxItems = GetCurrentMaxItems();
 
         for (int i = 0; i < _indicatorImages.Length; i++)
         {
@@ -268,7 +244,7 @@ public class ShopManager : MonoBehaviour
         // 3. Cập nhật Text hiển thị số lượng (Tạm thời chỉ hiển thị cho Boosters)
         if (_quantityText != null && SaveLoadManager.Data != null)
         {
-            // Tạm thời chỉ có dữ liệu số lượng cho Tab Boost (Index 0). Các tab khác nếu cần lưu thì bạn bổ sung vào PlayerData sau.
+            // Tạm thời chỉ có dữ liệu số lượng cho Tab Boost (Index 0).
             if (_currentTabIndex == 0 && SaveLoadManager.Data.BoostersOwned != null && _currentIndex < SaveLoadManager.Data.BoostersOwned.Count)
             {
                 _quantityText.gameObject.SetActive(true);
@@ -276,8 +252,21 @@ public class ShopManager : MonoBehaviour
             }
             else
             {
-                // Tab Coin và Skin hiện tại chưa làm logic sở hữu số lượng, tạm ẩn đi
                 _quantityText.gameObject.SetActive(false);
+            }
+        }
+
+        // Cập nhật Text hiển thị số Xu nhận được hoặc giá trị gói Coin (Text GIaTIenTuoi)
+        if (_coinRewardText != null)
+        {
+            if (_currentTabIndex == 1 && _shopConfig != null && _shopConfig.CoinPacks != null && _shopConfig.CoinPacks.Length > 0)
+            {
+                _coinRewardText.gameObject.SetActive(true);
+                _coinRewardText.text = _shopConfig.CoinPacks[_currentIndex].RewardAmount.ToString();
+            }
+            else
+            {
+                _coinRewardText.gameObject.SetActive(false);
             }
         }
 
@@ -294,7 +283,7 @@ public class ShopManager : MonoBehaviour
         Button boardButton = _priceBoardImage.GetComponent<Button>();
 
         // LOGIC CHO TAB SKIN (Tab 2)
-        if (_currentTabIndex == 2 && category.Use3DModel && _shopConfig != null && _shopConfig.Skins.Length > 0)
+        if (_currentTabIndex == 2 && _shopConfig != null && _shopConfig.Skins.Length > 0)
         {
             var skinData = _shopConfig.Skins[_currentIndex];
             bool isOwned = SaveLoadManager.Data.UnlockedSkins.Contains(skinData.Id);
@@ -337,37 +326,60 @@ public class ShopManager : MonoBehaviour
                 }
             }
         }
-        else
+        else if (_currentTabIndex == 0) // Tab Boost
         {
-            // Tab Boost/Coin: Luôn bật nút BUY xanh lá
+            // Tab Boost: Luôn bật nút BUY xanh lá
             if (_buyButtonObj != null) _buyButtonObj.SetActive(true);
             
-            // Tab Boost/Coin: Cấm bấm vào Bảng giá, chỉ cho bấm nút BUY
+            // Tab Boost: Cấm bấm vào Bảng giá, chỉ cho bấm nút BUY
             if (boardButton != null) boardButton.enabled = false;
 
-            // Reset hiển thị cho các Tab khác
             _priceBoardImage.sprite = category.PriceBoardSprite;
+            
+            // Dùng _priceText vì bảng gỗ Boost có đồng xu (cần lệch sang phải)
+            if (_actionText != null) _actionText.gameObject.SetActive(false);
             if (_priceText != null)
             {
                 _priceText.gameObject.SetActive(true);
-                // TODO: Điền logic lấy giá cho Boost hoặc Coin
-                _priceText.text = "???"; 
+                if (_shopConfig != null && _shopConfig.Boosters != null && _shopConfig.Boosters.Length > 0)
+                {
+                    _priceText.text = _shopConfig.Boosters[_currentIndex].Price.ToString(); 
+                }
             }
-            // Tab Boost/Coin nếu hình đã có chữ BUY thì ẩn action text đi
-            if (_actionText != null) _actionText.gameObject.SetActive(false);
+        }
+        else if (_currentTabIndex == 1) // Tab Coin
+        {
+            // Tab Coin: Luôn bật nút BUY xanh lá
+            if (_buyButtonObj != null) _buyButtonObj.SetActive(true);
+            
+            // Tab Coin: Cấm bấm vào Bảng giá, chỉ cho bấm nút BUY
+            if (boardButton != null) boardButton.enabled = false;
+
+            _priceBoardImage.sprite = category.PriceBoardSprite;
+
+            // Dùng _actionText vì bảng gỗ Coin trống (cần canh giữa), tận dụng text của Skin
+            if (_priceText != null) _priceText.gameObject.SetActive(false);
+            if (_actionText != null)
+            {
+                _actionText.gameObject.SetActive(true);
+                if (_shopConfig != null && _shopConfig.CoinPacks != null && _shopConfig.CoinPacks.Length > 0)
+                {
+                    _actionText.text = _shopConfig.CoinPacks[_currentIndex].PriceString; 
+                }
+            }
         }
     }
 
 
 
     /// <summary>
-    /// Gắn hàm này vào sự kiện OnClick của Button trên Bảng Giá
+    /// Gắn hàm này vào sự kiện OnClick của Button trên Bảng Giá HOẶC Nút BUY màu xanh lá
     /// </summary>
     public void OnActionClicked()
     {
         if (SaveLoadManager.Data == null) return;
 
-        // Xử lý logic Mua / Trang Bị cho Tab Skin
+        // LOGIC CHO TAB SKIN
         if (_currentTabIndex == 2 && _shopConfig != null && _shopConfig.Skins.Length > 0)
         {
             var skinData = _shopConfig.Skins[_currentIndex];
@@ -375,7 +387,7 @@ public class ShopManager : MonoBehaviour
 
             if (isOwned)
             {
-                // Người chơi đã sở hữu -> Trang bị
+                // Trang bị
                 SaveLoadManager.Data.CurrentSkinId = skinData.Id;
                 SaveLoadManager.Save();
                 UpdateActionUI();
@@ -383,14 +395,11 @@ public class ShopManager : MonoBehaviour
             }
             else
             {
-                // Người chơi chưa sở hữu -> Tiến hành Mua
+                // Tiến hành Mua bằng Xu
                 if (SaveLoadManager.Data.Gold >= skinData.Price)
                 {
-                    // Trừ tiền vàng
                     SaveLoadManager.Data.Gold -= skinData.Price;
-                    // Mở khóa skin
                     SaveLoadManager.Data.UnlockedSkins.Add(skinData.Id);
-                    // Tự động trang bị sau khi mua
                     SaveLoadManager.Data.CurrentSkinId = skinData.Id;
                     
                     SaveLoadManager.Save();
@@ -401,8 +410,44 @@ public class ShopManager : MonoBehaviour
                 else
                 {
                     Debug.LogWarning("[Shop] Không đủ vàng để mua skin này!");
-                    // TODO: Gọi hiệu ứng rung lắc nút bảng giá hoặc popup báo hết tiền (nếu có)
                 }
+            }
+        }
+        // LOGIC CHO TAB COIN (Dùng để test)
+        else if (_currentTabIndex == 1 && _shopConfig != null && _shopConfig.CoinPacks.Length > 0)
+        {
+            var packData = _shopConfig.CoinPacks[_currentIndex];
+            
+            // Tạm thời cộng thẳng xu để test, không bắt thanh toán tiền thật
+            SaveLoadManager.Data.Gold += packData.RewardAmount;
+            SaveLoadManager.Save();
+            
+            UpdateGoldText();
+            Debug.Log($"[Shop] Đã test mua gói {packData.Id}, nhận được {packData.RewardAmount} Xu!");
+        }
+        // LOGIC CHO TAB BOOST
+        else if (_currentTabIndex == 0 && _shopConfig != null && _shopConfig.Boosters.Length > 0)
+        {
+            var boostData = _shopConfig.Boosters[_currentIndex];
+            if (SaveLoadManager.Data.Gold >= boostData.Price)
+            {
+                SaveLoadManager.Data.Gold -= boostData.Price;
+                
+                // Tăng số lượng Booster sở hữu (nếu mảng đã được khởi tạo)
+                if (SaveLoadManager.Data.BoostersOwned != null && _currentIndex < SaveLoadManager.Data.BoostersOwned.Count)
+                {
+                    SaveLoadManager.Data.BoostersOwned[_currentIndex]++;
+                }
+                
+                SaveLoadManager.Save();
+                UpdateActionUI();
+                UpdateGoldText();
+                UpdateUI(); // Cập nhật lại text x1, x2
+                Debug.Log($"[Shop] Mua thành công boost: {boostData.Id}");
+            }
+            else
+            {
+                Debug.LogWarning("[Shop] Không đủ vàng để mua boost này!");
             }
         }
     }

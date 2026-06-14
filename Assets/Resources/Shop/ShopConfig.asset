@@ -37,3 +37,41 @@ MonoBehaviour:
     DisplayName: "H\u1ED3ng"
     Price: 100
     Texture: {fileID: 2800000, guid: 67117bc40e7a4af42bc212407275e9b9, type: 3}
+  Boosters:
+  - Id: Boost01
+    DisplayName: "Th\xEAm \u0111\u0129a b\xE1nh"
+    Price: 100
+    Icon: {fileID: 21300000, guid: dc0d80e80bb19604582b305d06af4ab5, type: 3}
+  - Id: Boost02
+    DisplayName: "Th\xEAm mi\u1EBFng b\xE1nh"
+    Price: 100
+    Icon: {fileID: 21300000, guid: 6a5322d4047ecc045ac666252fcc0898, type: 3}
+  - Id: Boost03
+    DisplayName: "V\u1EE9t \u0111\u0129a v\xE0o th\xF9ng r\xE1c"
+    Price: 100
+    Icon: {fileID: 21300000, guid: 2e023dcd718a74446baf50dbfbbe7bd4, type: 3}
+  - Id: Boost04
+    DisplayName: "\u0110\u1ED5i v\u1ECB tr\xED \u0111\u0129a"
+    Price: 100
+    Icon: {fileID: 21300000, guid: f6e7f0fab7762f04aa206f60ba3230a7, type: 3}
+  CoinPacks:
+  - Id: 
+    DisplayName: 
+    PriceString: 
+    RewardAmount: 0
+    Icon: {fileID: 0}
+  - Id: 
+    DisplayName: 
+    PriceString: 
+    RewardAmount: 0
+    Icon: {fileID: 0}
+  - Id: 
+    DisplayName: 
+    PriceString: 
+    RewardAmount: 0
+    Icon: {fileID: 0}
+  - Id: 
+    DisplayName: 
+    PriceString: 
+    RewardAmount: 0
+    Icon: {fileID: 0}
