@@ -149,6 +149,7 @@ GameObject:
   - component: {fileID: 403987386387112557}
   - component: {fileID: 4545884353861604940}
   - component: {fileID: 5344247506435838760}
+  - component: {fileID: 2101249327071905628}
   m_Layer: 0
   m_Name: BoostButton
   m_TagString: Untagged
@@ -257,7 +258,34 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 4545884353861604940}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2101249327071905628}
+        m_TargetAssemblyTypeName: BoostButton, Assembly-CSharp
+        m_MethodName: OnClickButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+--- !u!114 &2101249327071905628
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4949904335396610101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edd2ca302cf9d2c46be9fde4d09f9202, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _boosterType: 0
+  _quantityText: {fileID: 5576054139626201203}
+  _shopConfig: {fileID: 11400000, guid: 02a7de1ab7a78c24bac67fc9f5d6c327, type: 2}
 --- !u!1 &5383219723743095293
 GameObject:
   m_ObjectHideFlags: 0

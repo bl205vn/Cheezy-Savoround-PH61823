@@ -185,8 +185,11 @@ public class ShopManager : MonoBehaviour
     {
         if (_goldText != null && SaveLoadManager.Data != null)
         {
-            _goldText.text = SaveLoadManager.Data.Gold.ToString();
+            _goldText.SetText("{0}", SaveLoadManager.Data.Gold);
         }
+        
+        // Gọi thêm GoldDisplay.UpdateAll() để đảm bảo HUD ở ngoài cũng được cập nhật
+        GoldDisplay.UpdateAll();
     }
 
     /// <summary>
@@ -266,7 +269,7 @@ public class ShopManager : MonoBehaviour
             if (_currentTabIndex == 1 && _shopConfig != null && _shopConfig.CoinPacks != null && _shopConfig.CoinPacks.Length > 0)
             {
                 _coinRewardText.gameObject.SetActive(true);
-                _coinRewardText.text = _shopConfig.CoinPacks[_currentIndex].RewardAmount.ToString() + " Coin";
+                _coinRewardText.SetText("{0} Coin", _shopConfig.CoinPacks[_currentIndex].RewardAmount);
             }
             else
             {
@@ -308,7 +311,7 @@ public class ShopManager : MonoBehaviour
                 if (_actionText != null)
                 {
                     _actionText.gameObject.SetActive(true);
-                    _actionText.text = isEquipped ? "ĐANG DÙNG" : "CHỌN";
+                    _actionText.SetText(isEquipped ? "ĐANG DÙNG" : "CHỌN");
                 }
             }
             else
@@ -326,7 +329,7 @@ public class ShopManager : MonoBehaviour
                 if (_priceText != null)
                 {
                     _priceText.gameObject.SetActive(true);
-                    _priceText.text = skinData.Price.ToString();
+                    _priceText.SetText("{0}", skinData.Price);
                 }
             }
         }
@@ -347,7 +350,7 @@ public class ShopManager : MonoBehaviour
                 _priceText.gameObject.SetActive(true);
                 if (_shopConfig != null && _shopConfig.Boosters != null && _shopConfig.Boosters.Length > 0)
                 {
-                    _priceText.text = _shopConfig.Boosters[_currentIndex].Price.ToString(); 
+                    _priceText.SetText("{0}", _shopConfig.Boosters[_currentIndex].Price); 
                 }
             }
         }
@@ -368,7 +371,7 @@ public class ShopManager : MonoBehaviour
                 _actionText.gameObject.SetActive(true);
                 if (_shopConfig != null && _shopConfig.CoinPacks != null && _shopConfig.CoinPacks.Length > 0)
                 {
-                    _actionText.text = _shopConfig.CoinPacks[_currentIndex].PriceString; 
+                    _actionText.SetText(_shopConfig.CoinPacks[_currentIndex].PriceString); 
                 }
             }
         }
@@ -447,6 +450,7 @@ public class ShopManager : MonoBehaviour
                 UpdateActionUI();
                 UpdateGoldText();
                 UpdateUI(); // Cập nhật lại text x1, x2
+                BoostButton.UpdateAll(); // Đồng bộ lại với HUD bên ngoài
                 Debug.Log($"[Shop] Mua thành công boost: {boostData.Id}");
             }
             else
