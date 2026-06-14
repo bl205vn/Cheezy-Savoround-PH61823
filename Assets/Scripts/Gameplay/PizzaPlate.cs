@@ -48,6 +48,20 @@ public class PizzaPlate : MonoBehaviour
         ApplyCurrentSkin();
     }
 
+    public void FitToSize(float targetWidth)
+    {
+        if (_plateRenderer == null) _plateRenderer = GetComponentInChildren<Renderer>();
+        if (_plateRenderer == null) return;
+
+        transform.localScale = Vector3.one;
+        Vector3 size = _plateRenderer.bounds.size;
+        float scaleX = (size.x > 0.001f) ? (targetWidth / size.x) : 1f;
+        float scaleZ = (size.z > 0.001f) ? (targetWidth / size.z) : 1f;
+        float uniform = Mathf.Min(scaleX, scaleZ);
+        transform.localScale = Vector3.one * uniform;
+        _baseScale = transform.localScale;
+    }
+
     private void OnEnable()
     {
         GameEvents.OnSkinChanged += HandleSkinChanged;

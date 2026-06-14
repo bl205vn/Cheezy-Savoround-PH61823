@@ -176,10 +176,11 @@ public class UIManager : MonoBehaviour
         // (Các đĩa đã rời cell qua PlayShrinkAndReturn vẫn giữ DOScale tween treo)
         DOTween.KillAll();
 
-        // 1. Đặt level về 1 theo yêu cầu
+        // 1. Đặt level về 1 theo yêu cầu, xoá tiến trình
         if (SaveLoadManager.Data != null)
         {
             SaveLoadManager.Data.CurrentLevel = 1;
+            SaveLoadManager.Data.CurrentLevelProgress = null;
             SaveLoadManager.Save();
         }
 

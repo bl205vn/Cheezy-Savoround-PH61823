@@ -165,7 +165,7 @@ public class TrayManager : MonoBehaviour
             GameObject plateObj = plate.gameObject;
 
             // Ép scale đĩa pizza theo kích thước slot
-            FitPlateToSlot(plateObj);
+            plate.FitToSize(_slotSpacing);
             plate.Initialize(anchor.transform);
             plate.GenerateRandomSlices(); // Sinh bánh ngẫu nhiên từ JSON config
 
@@ -179,26 +179,6 @@ public class TrayManager : MonoBehaviour
         {
             OnRefillComplete?.Invoke();
         }
-    }
-
-    /// <summary>
-    /// Ép scale prefab vào đúng kích thước 1 slot dựa trên Renderer bounds.
-    /// </summary>
-    private void FitPlateToSlot(GameObject plateObj)
-    {
-        Renderer rend = plateObj.GetComponentInChildren<Renderer>();
-        if (rend == null) return;
-
-        Vector3 currentSize = rend.bounds.size;
-        
-        // Chỉ scale theo trục X và Z (mặt phẳng ngang), giữ nguyên tỷ lệ Y
-        float scaleX = (currentSize.x > 0.001f) ? (_slotSpacing / currentSize.x) : 1f;
-        float scaleZ = (currentSize.z > 0.001f) ? (_slotSpacing / currentSize.z) : 1f;
-        
-        // Dùng scale nhỏ nhất để giữ tỷ lệ, khít hoàn toàn
-        float uniformScale = Mathf.Min(scaleX, scaleZ);
-        
-        plateObj.transform.localScale = plateObj.transform.localScale * uniformScale;
     }
 
     private void ClearTray()
@@ -299,8 +279,7 @@ public class TrayManager : MonoBehaviour
             plate.transform.rotation = Quaternion.identity;
             plate.transform.SetParent(anchor.transform);
             
-            GameObject plateObj = plate.gameObject;
-            FitPlateToSlot(plateObj);
+            plate.FitToSize(_slotSpacing);
             plate.Initialize(anchor.transform);
             
             plate.RestoreSlices(types); // Sinh bánh cố định theo data

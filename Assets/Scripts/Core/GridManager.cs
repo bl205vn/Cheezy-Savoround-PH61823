@@ -8,6 +8,7 @@ public class GridManager : MonoBehaviour
 
     [SerializeField] private GameObject _cellPrefab;
     [SerializeField] private float _cellSpacing; // Khoảng cách giữa các ô
+    public float CellSpacing => _cellSpacing;
     
     [Header("Visual")]
     [SerializeField] private Color _lightCellColor = new Color(0.9f, 0.85f, 0.7f); // Màu sáng (lẻ)

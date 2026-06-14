@@ -52,6 +52,7 @@ public class GridCell : MonoBehaviour
         
         // Cập nhật data trước để ghi nhận _baseScale đúng với parent mới
         plate.PlaceAt(snapPosition, transform);
+        plate.FitToSize(GridManager.Instance.CellSpacing);
         
         // Gọi Coroutine nhảy vào ô và chạy hiệu ứng Squash sau khi xong
         plate.StartCoroutine(plate.AnimateToCell(plate.transform.position, snapPosition, 0.25f, () => 
@@ -66,6 +67,7 @@ public class GridCell : MonoBehaviour
         CurrentPlate = plate;
         Vector3 snapPosition = new Vector3(transform.position.x, transform.position.y + _snapOffsetY, transform.position.z);
         plate.PlaceAt(snapPosition, transform);
+        plate.FitToSize(GridManager.Instance.CellSpacing);
         plate.transform.position = snapPosition; // Set position directly without animation
     }
 
