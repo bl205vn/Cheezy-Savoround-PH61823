@@ -262,7 +262,7 @@ public class ShopManager : MonoBehaviour
             if (_currentTabIndex == 1 && _shopConfig != null && _shopConfig.CoinPacks != null && _shopConfig.CoinPacks.Length > 0)
             {
                 _coinRewardText.gameObject.SetActive(true);
-                _coinRewardText.text = _shopConfig.CoinPacks[_currentIndex].RewardAmount.ToString();
+                _coinRewardText.text = _shopConfig.CoinPacks[_currentIndex].RewardAmount.ToString() + " Coin";
             }
             else
             {
