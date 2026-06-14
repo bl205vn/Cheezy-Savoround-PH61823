@@ -60,6 +60,15 @@ public class GridCell : MonoBehaviour
         }));
     }
 
+    public void PlacePlateInstant(PizzaPlate plate)
+    {
+        IsOccupied = true;
+        CurrentPlate = plate;
+        Vector3 snapPosition = new Vector3(transform.position.x, transform.position.y + _snapOffsetY, transform.position.z);
+        plate.PlaceAt(snapPosition, transform);
+        plate.transform.position = snapPosition; // Set position directly without animation
+    }
+
     public void ClearPlate()
     {
         IsOccupied = false;

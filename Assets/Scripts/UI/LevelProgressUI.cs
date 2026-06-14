@@ -83,6 +83,7 @@ public class LevelProgressUI : MonoBehaviour
         if (SaveLoadManager.Data != null)
         {
             SaveLoadManager.Data.CurrentLevel++;
+            SaveLoadManager.Data.CurrentLevelProgress = null; // Xoá tiến trình màn cũ để màn mới làm mới hoàn toàn
             SaveLoadManager.Save();
         }
 

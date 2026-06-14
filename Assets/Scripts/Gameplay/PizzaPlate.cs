@@ -63,7 +63,7 @@ public class PizzaPlate : MonoBehaviour
         ApplyCurrentSkin();
     }
 
-    private void ApplyCurrentSkin()
+    public void ApplyCurrentSkin()
     {
         if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
         if (_shopConfig == null) 
@@ -550,6 +550,35 @@ public class PizzaPlate : MonoBehaviour
             
             slice.SetVisual(selectedTypes[i]);
 
+            _slices[i] = slice;
+        }
+    }
+
+    public void RestoreSlices(int[] types)
+    {
+        if (LevelManager.CurrentLevelData == null) return;
+
+        ClearSlices();
+
+        int maxSlices = LevelManager.CurrentLevelData.maxSlices;
+        if (_slices == null || _slices.Length != maxSlices)
+        {
+            _slices = new PizzaSliceVisual[maxSlices];
+        }
+
+        float angleStep = 360f / maxSlices;
+
+        for (int i = 0; i < maxSlices; i++)
+        {
+            if (i >= types.Length || types[i] == -1) continue; // Ô trống
+
+            PizzaSliceVisual slice = ObjectPoolManager.Instance.GetPizzaSlice();
+            slice.transform.SetParent(this.transform, false);
+            slice.transform.localPosition = new Vector3(0, _sliceYOffset, 0);
+            slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
+            slice.transform.localScale = Vector3.one;
+
+            slice.SetVisual(types[i]);
             _slices[i] = slice;
         }
     }

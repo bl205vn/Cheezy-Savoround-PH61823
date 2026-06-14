@@ -16,6 +16,9 @@ public static class SaveLoadManager
         // Đăng ký nhận Vàng khi nổ đĩa (tránh duplicate nếu tắt Domain Reload)
         GameEvents.OnPlateExploded -= HandlePlateExploded;
         GameEvents.OnPlateExploded += HandlePlateExploded;
+
+        GameStateManager.OnStateChanged -= HandleStateChanged;
+        GameStateManager.OnStateChanged += HandleStateChanged;
     }
 
     private static void HandlePlateExploded(int pizzaType, int scoreAdded, int goldAdded)
@@ -25,6 +28,23 @@ public static class SaveLoadManager
             Data.Gold += goldAdded;
             // Không Save() liên tục để tránh I/O lag. Thay vào đó, gọi UpdateAll UI.
             GoldDisplay.UpdateAll();
+        }
+    }
+
+    private static void HandleStateChanged(IGameState state)
+    {
+        // Khi FSM quay về trạng thái ổn định (PlayingState), cập nhật trạng thái bàn chơi vào RAM
+        if (state is PlayingState)
+        {
+            if (Data != null && GridManager.Instance != null && TrayManager.Instance != null && LevelManager.Instance != null)
+            {
+                if (Data.CurrentLevelProgress == null)
+                    Data.CurrentLevelProgress = new LevelProgressData();
+
+                Data.CurrentLevelProgress.levelId = SaveLoadManager.Data.CurrentLevel;
+                Data.CurrentLevelProgress.occupiedCells = GridManager.Instance.CaptureState();
+                Data.CurrentLevelProgress.traySlots = TrayManager.Instance.CaptureState();
+            }
         }
     }
 

@@ -233,6 +233,89 @@ public class TrayManager : MonoBehaviour
         _pendingRefill = false;
     }
 
+    public List<int[]> CaptureState()
+    {
+        List<int[]> traySlots = new List<int[]>();
+        if (_slotPlates == null) return traySlots;
+        
+        int maxSlices = LevelManager.CurrentLevelData.maxSlices;
+        for (int i = 0; i < _slotPlates.Length; i++)
+        {
+            if (_slotPlates[i] != null)
+            {
+                int[] types = new int[maxSlices];
+                PizzaSliceVisual[] slices = _slotPlates[i].Slices;
+                for (int s = 0; s < maxSlices; s++)
+                {
+                    if (s < slices.Length && slices[s] != null)
+                    {
+                        types[s] = slices[s].TypeIndex;
+                    }
+                    else
+                    {
+                        types[s] = -1;
+                    }
+                }
+                traySlots.Add(types);
+            }
+            else
+            {
+                traySlots.Add(null); // Slot trống
+            }
+        }
+        return traySlots;
+    }
+
+    public void RestoreState(List<int[]> savedSlots)
+    {
+        if (savedSlots == null || _slotAnchors == null || savedSlots.Count != _slotAnchors.Count) return;
+        
+        _pendingRefill = false;
+        int maxSlices = LevelManager.CurrentLevelData.maxSlices;
+
+        for (int i = 0; i < savedSlots.Count; i++)
+        {
+            int[] types = savedSlots[i];
+            
+            // Xoá đĩa cũ nếu có
+            if (_slotPlates[i] != null)
+            {
+                _slotPlates[i].ClearSlices();
+                ObjectPoolManager.Instance.ReturnPizzaPlate(_slotPlates[i]);
+                _slotPlates[i] = null;
+            }
+
+            if (types == null)
+            {
+                _pendingRefill = true; // Có slot trống
+                continue;
+            }
+
+            GameObject anchor = _slotAnchors[i];
+            Vector3 worldPos = anchor.transform.position;
+
+            PizzaPlate plate = ObjectPoolManager.Instance.GetPizzaPlate();
+            plate.transform.position = worldPos;
+            plate.transform.rotation = Quaternion.identity;
+            plate.transform.SetParent(anchor.transform);
+            
+            GameObject plateObj = plate.gameObject;
+            FitPlateToSlot(plateObj);
+            plate.Initialize(anchor.transform);
+            
+            plate.RestoreSlices(types); // Sinh bánh cố định theo data
+            plate.ApplyCurrentSkin();
+
+            _slotPlates[i] = plate;
+        }
+
+        // Kiểm tra xem tất cả có trống không
+        if (IsAllSlotsEmpty())
+        {
+            _pendingRefill = true;
+        }
+    }
+
 #if UNITY_EDITOR
     public void DrawGizmos(int slotCount)
     {

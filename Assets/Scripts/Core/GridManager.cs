@@ -1091,6 +1091,70 @@ public class GridManager : MonoBehaviour
         return true;
     }
 
+    public List<GridCellSaveData> CaptureState()
+    {
+        List<GridCellSaveData> cellDataList = new List<GridCellSaveData>();
+        foreach (var kvp in _gridCells)
+        {
+            GridCell cell = kvp.Value;
+            if (cell.IsOccupied && cell.CurrentPlate != null)
+            {
+                PizzaPlate plate = cell.CurrentPlate;
+                int maxSlices = LevelManager.CurrentLevelData.maxSlices;
+                int[] types = new int[maxSlices];
+                
+                // Thu thập các slice
+                PizzaSliceVisual[] slices = plate.Slices;
+                for (int i = 0; i < maxSlices; i++)
+                {
+                    if (i < slices.Length && slices[i] != null)
+                    {
+                        types[i] = slices[i].TypeIndex;
+                    }
+                    else
+                    {
+                        types[i] = -1; // Trống
+                    }
+                }
+
+                cellDataList.Add(new GridCellSaveData
+                {
+                    x = cell.GridPosition.x,
+                    y = cell.GridPosition.y,
+                    sliceTypes = types,
+                    priority = _enqueueOrder.ContainsKey(cell) ? _enqueueOrder[cell] : 0
+                });
+            }
+        }
+        return cellDataList;
+    }
+
+    public void RestoreState(List<GridCellSaveData> stateData)
+    {
+        if (stateData == null) return;
+        
+        foreach (var data in stateData)
+        {
+            Vector2Int pos = new Vector2Int(data.x, data.y);
+            if (_gridCells.TryGetValue(pos, out GridCell cell))
+            {
+                PizzaPlate newPlate = ObjectPoolManager.Instance.GetPizzaPlate();
+                newPlate.RestoreSlices(data.sliceTypes);
+                
+                // Khôi phục thuộc tính và giao diện
+                newPlate.ApplyCurrentSkin(); // Set skin đang dùng
+
+                cell.PlacePlateInstant(newPlate);
+
+                // Khôi phục priority queue (nếu cần xử lý merge)
+                if (data.priority > 0)
+                {
+                    _enqueueOrder[cell] = data.priority;
+                }
+            }
+        }
+    }
+
 #if UNITY_EDITOR
     public void DrawGizmos(int width, int height)
     {

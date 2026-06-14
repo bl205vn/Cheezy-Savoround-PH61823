@@ -79,6 +79,15 @@ public class LevelManager : MonoBehaviour
         {
             _trayManager.GenerateTray(data.holdSlotCount);
         }
+
+        // --- Khôi phục tiến trình (nếu có) ---
+        if (SaveLoadManager.Data != null && SaveLoadManager.Data.CurrentLevelProgress != null && SaveLoadManager.Data.CurrentLevelProgress.levelId == data.levelId)
+        {
+            if (_gridManager != null)
+                _gridManager.RestoreState(SaveLoadManager.Data.CurrentLevelProgress.occupiedCells);
+            if (_trayManager != null)
+                _trayManager.RestoreState(SaveLoadManager.Data.CurrentLevelProgress.traySlots);
+        }
     }
 
 #if UNITY_EDITOR
