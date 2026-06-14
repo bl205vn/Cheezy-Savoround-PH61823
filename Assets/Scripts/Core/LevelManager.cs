@@ -70,6 +70,10 @@ public class LevelManager : MonoBehaviour
             ObjectPoolManager.Instance.InitializePool(data.gridWidth, data.gridHeight, data.holdSlotCount, data.maxSlices);
         }
 
+        bool hasSavedProgress = SaveLoadManager.Data != null 
+            && SaveLoadManager.Data.CurrentLevelProgress != null 
+            && SaveLoadManager.Data.CurrentLevelProgress.levelId == data.levelId;
+
         if (_gridManager != null)
         {
             _gridManager.GenerateGrid(data.levelId, data.gridWidth, data.gridHeight);
@@ -77,11 +81,11 @@ public class LevelManager : MonoBehaviour
         
         if (_trayManager != null)
         {
-            _trayManager.GenerateTray(data.holdSlotCount);
+            _trayManager.GenerateTray(data.holdSlotCount, !hasSavedProgress);
         }
 
         // --- Khôi phục tiến trình (nếu có) ---
-        if (SaveLoadManager.Data != null && SaveLoadManager.Data.CurrentLevelProgress != null && SaveLoadManager.Data.CurrentLevelProgress.levelId == data.levelId)
+        if (hasSavedProgress)
         {
             if (_gridManager != null)
                 _gridManager.RestoreState(SaveLoadManager.Data.CurrentLevelProgress.occupiedCells);

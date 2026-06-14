@@ -1122,8 +1122,7 @@ public class GridManager : MonoBehaviour
                 {
                     x = cell.GridPosition.x,
                     y = cell.GridPosition.y,
-                    sliceTypes = types,
-                    priority = _enqueueOrder.ContainsKey(cell) ? _enqueueOrder[cell] : 0
+                    sliceTypes = types
                 });
             }
         }
@@ -1146,12 +1145,6 @@ public class GridManager : MonoBehaviour
                 newPlate.ApplyCurrentSkin(); // Set skin đang dùng
 
                 cell.PlacePlateInstant(newPlate);
-
-                // Khôi phục priority queue (nếu cần xử lý merge)
-                if (data.priority > 0)
-                {
-                    _enqueueOrder[cell] = data.priority;
-                }
             }
         }
     }

@@ -14,6 +14,8 @@ public class LevelProgressUI : MonoBehaviour
     
     private int _currentScore = 0;
 
+    public int CurrentScore => _currentScore;
+    
     private void Start()
     {
         // Kiểm tra và khởi tạo cấp độ mặc định (fix lỗi file JSON cũ)
@@ -23,6 +25,12 @@ public class LevelProgressUI : MonoBehaviour
             SaveLoadManager.Save();
         }
         
+        // Khôi phục score nếu có save
+        if (SaveLoadManager.Data != null && SaveLoadManager.Data.CurrentLevelProgress != null && SaveLoadManager.Data.CurrentLevelProgress.levelId == SaveLoadManager.Data.CurrentLevel)
+        {
+            _currentScore = SaveLoadManager.Data.CurrentLevelProgress.currentScore;
+        }
+
         InitializeUI();
     }
 

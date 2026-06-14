@@ -44,6 +44,12 @@ public static class SaveLoadManager
                 Data.CurrentLevelProgress.levelId = SaveLoadManager.Data.CurrentLevel;
                 Data.CurrentLevelProgress.occupiedCells = GridManager.Instance.CaptureState();
                 Data.CurrentLevelProgress.traySlots = TrayManager.Instance.CaptureState();
+
+                var levelProgressUI = Object.FindFirstObjectByType<LevelProgressUI>();
+                if (levelProgressUI != null)
+                {
+                    Data.CurrentLevelProgress.currentScore = levelProgressUI.CurrentScore;
+                }
             }
         }
     }

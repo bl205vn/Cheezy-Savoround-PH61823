@@ -105,7 +105,7 @@ public class TrayManager : MonoBehaviour
     /// Khởi tạo khay chứa: tạo các anchor slot + sinh batch đĩa đầu tiên.
     /// Được gọi bởi LevelManager khi load level.
     /// </summary>
-    public void GenerateTray(int slotCount)
+    public void GenerateTray(int slotCount, bool refillImmediately = true)
     {
         ClearTray();
 
@@ -134,9 +134,16 @@ public class TrayManager : MonoBehaviour
         }
 
         // Sinh batch đĩa đầu tiên
-        RefillTray();
+        if (refillImmediately)
+        {
+            RefillTray();
+        }
+        else
+        {
+            _pendingRefill = true;
+        }
 
-        Debug.Log($"[TrayManager] Đã tạo khay {slotCount} slot + sinh batch đĩa đầu tiên.");
+        Debug.Log($"[TrayManager] Đã tạo khay {slotCount} slot.");
     }
 
     /// <summary>
