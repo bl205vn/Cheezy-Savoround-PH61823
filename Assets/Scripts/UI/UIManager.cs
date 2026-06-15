@@ -62,7 +62,14 @@ public class UIManager : MonoBehaviour
 
     // Các hàm Public để gắn vào OnClick() của các Button trong Lobby
     public void OpenShop() => ShowPanel(_shopPanel);
-    public void OpenAchievement() => ShowPanel(_achievementPanel);
+    public void OpenAchievement()
+    {
+        ShowPanel(_achievementPanel);
+        if (AchievementManager.Instance != null)
+        {
+            AchievementManager.Instance.RefreshUI();
+        }
+    }
     public void OpenHowToPlay() => ShowPanel(_howToPlayPanel);
     public void BackToStarter() => ShowPanel(_starterPanel);
 

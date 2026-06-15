@@ -26,4 +26,23 @@ public static class GameEvents
     // Thay đổi Skin đĩa
     public static event Action<string> OnSkinChanged;
     public static void TriggerSkinChanged(string newSkinId) => OnSkinChanged?.Invoke(newSkinId);
+
+    // Cập nhật thêm cho hệ thống Achievement
+    public static event Action<int> OnPizzaMerged;
+    public static void TriggerPizzaMerged(int count) => OnPizzaMerged?.Invoke(count);
+
+    public static event Action OnLevelCompleted;
+    public static void TriggerLevelCompleted() => OnLevelCompleted?.Invoke();
+
+    public static event Action OnBoosterUsed;
+    public static void TriggerBoosterUsed() => OnBoosterUsed?.Invoke();
+
+    public static event Action<int> OnGoldAdded;
+    public static void TriggerGoldAdded(int amount) => OnGoldAdded?.Invoke(amount);
+
+    public static event Action<string> OnSkinUnlocked;
+    public static void TriggerSkinUnlocked(string skinId) => OnSkinUnlocked?.Invoke(skinId);
+
+    public static event Action<int> OnDailyLoginClaimed;
+    public static void TriggerDailyLoginClaimed(int dayIndex) => OnDailyLoginClaimed?.Invoke(dayIndex);
 }

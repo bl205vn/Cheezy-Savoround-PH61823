@@ -420,6 +420,7 @@ public class ShopManager : MonoBehaviour
                     SaveLoadManager.Data.CurrentSkinId = skinData.Id;
                     
                     SaveLoadManager.Save();
+                    GameEvents.TriggerSkinUnlocked(skinData.Id);
                     GameEvents.TriggerSkinChanged(skinData.Id); // Trigger thay đổi skin tức thời
                     UpdateActionUI();
                     UpdateGoldText();
@@ -438,6 +439,7 @@ public class ShopManager : MonoBehaviour
             
             // Tạm thời cộng thẳng xu để test, không bắt thanh toán tiền thật
             SaveLoadManager.Data.Gold += packData.RewardAmount;
+            GameEvents.TriggerGoldAdded(packData.RewardAmount);
             SaveLoadManager.Save();
             
             UpdateGoldText();

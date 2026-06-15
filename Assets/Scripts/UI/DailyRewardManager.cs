@@ -221,6 +221,8 @@ public class DailyRewardManager : MonoBehaviour
         // Vì CheckDailyReward đã lưu LastVerifiedServerTicks chuẩn nhất.
         SaveLoadManager.Data.LastDailyRewardTime = SaveLoadManager.Data.TimeValidation.LastVerifiedServerTicks;
         SaveLoadManager.Data.CurrentDailyRewardDay++;
+        
+        GameEvents.TriggerDailyLoginClaimed(SaveLoadManager.Data.CurrentDailyRewardDay);
 
         SaveLoadManager.Save();
         
@@ -233,6 +235,7 @@ public class DailyRewardManager : MonoBehaviour
     private void GiveGold(int amount)
     {
         SaveLoadManager.Data.Gold += amount;
+        GameEvents.TriggerGoldAdded(amount);
         GoldDisplay.UpdateAll();
         Debug.Log($"[DailyReward] +{amount} Vàng");
     }
@@ -256,11 +259,13 @@ public class DailyRewardManager : MonoBehaviour
         if (!SaveLoadManager.Data.UnlockedSkins.Contains(skinId))
         {
             SaveLoadManager.Data.UnlockedSkins.Add(skinId);
+            GameEvents.TriggerSkinUnlocked(skinId);
             Debug.Log($"[DailyReward] Mở khóa Skin: {skinId}");
         }
         else
         {
             SaveLoadManager.Data.Gold += 100;
+            GameEvents.TriggerGoldAdded(100);
             GoldDisplay.UpdateAll();
             Debug.Log($"[DailyReward] Skin {skinId} đã có, đền bù 100 Vàng");
         }

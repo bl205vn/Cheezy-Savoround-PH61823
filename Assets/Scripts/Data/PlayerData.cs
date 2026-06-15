@@ -46,6 +46,7 @@ public struct AchievementSaveData
 {
     public string Id;
     public int Progress;
+    public bool IsClaimed;
 }
 
 [Serializable]
