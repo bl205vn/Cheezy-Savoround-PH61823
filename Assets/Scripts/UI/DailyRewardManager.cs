@@ -1,7 +1,40 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
+
+public static class ServerTimeProvider
+{
+    public static async Task<DateTime?> TryGetServerTimeAsync()
+    {
+        try
+        {
+            using (UnityWebRequest req = UnityWebRequest.Head("https://www.google.com"))
+            {
+                req.timeout = 5;
+                var op = req.SendWebRequest();
+                while (!op.isDone) await Task.Yield();
+
+                if (req.result != UnityWebRequest.Result.Success) return null;
+
+                string dateHeader = req.GetResponseHeader("Date");
+                if (DateTime.TryParse(dateHeader, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+                    out DateTime serverTime))
+                {
+                    return serverTime;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[ServerTime] Failed: {e.Message}");
+        }
+        return null;
+    }
+}
 
 /// <summary>
 /// Quản lý logic Daily Reward: kiểm tra thời gian, phát quà, cập nhật UI.
@@ -18,24 +51,101 @@ public class DailyRewardManager : MonoBehaviour
 
     private bool _canClaimToday = false;
 
+    private void Start()
+    {
+        // Gọi 1 lần lúc mới vào game để check giờ ngầm trước
+        CheckDailyReward();
+    }
 
-
-    public void CheckDailyReward()
+    public async void CheckDailyReward()
     {
         if (SaveLoadManager.Data == null || _config == null) return;
 
+        // Đảm bảo TimeValidation không bị null (với user cũ)
+        if (SaveLoadManager.Data.TimeValidation == null)
+        {
+            SaveLoadManager.Data.TimeValidation = new TimeValidationData();
+        }
+
+        var tv = SaveLoadManager.Data.TimeValidation;
+        DateTime deviceNow = DateTime.UtcNow;
+        DateTime trustedNow;
+
+        // --- Thử lấy server time ---
+        DateTime? serverTime = await ServerTimeProvider.TryGetServerTimeAsync();
+
+        if (serverTime.HasValue)
+        {
+            trustedNow = serverTime.Value;
+
+            // Cập nhật mốc verified mới nhất: lưu cả server time VÀ device time tại thời điểm đó
+            tv.LastVerifiedServerTicks = trustedNow.Ticks;
+            tv.LastVerifiedDeviceTicks = deviceNow.Ticks;
+            tv.SuspiciousJumpCount = 0; // Reset vì đã verify thành công
+        }
+        else
+        {
+            // --- OFFLINE: dùng device time, nhưng validate qua offset đã lưu ---
+            if (tv.LastVerifiedServerTicks > 0)
+            {
+                // Tính thời gian đã trôi qua theo MÁY kể từ lần verify cuối
+                long deviceElapsedTicks = deviceNow.Ticks - tv.LastVerifiedDeviceTicks;
+
+                // Ước lượng "giờ thật" = giờ server đã verify + thời gian trôi qua theo máy
+                DateTime estimatedNow = new DateTime(tv.LastVerifiedServerTicks + deviceElapsedTicks, DateTimeKind.Utc);
+
+                // So sánh device time hiện tại với estimate
+                TimeSpan diff = estimatedNow - deviceNow;
+
+                if (diff.TotalMinutes > 5) // Threshold tránh false positive do lệch timezone
+                {
+                    Debug.LogWarning($"[DailyReward] Phát hiện lùi giờ offline: lệch {diff.TotalHours:F1}h");
+                    tv.SuspiciousJumpCount++;
+                    trustedNow = estimatedNow; // Dùng estimate, không cho qua ngày mới bằng cách lùi giờ
+                }
+                else if (diff.TotalMinutes < -5)
+                {
+                    // Chỉnh TIẾN giờ offline -> Tăng count nghi ngờ, nhưng vẫn phải dùng device time vì không có căn cứ
+                    tv.SuspiciousJumpCount++;
+                    trustedNow = deviceNow;
+                }
+                else
+                {
+                    trustedNow = deviceNow;
+                }
+
+                // Cập nhật baseline để lần check sau dùng deviceElapsed từ điểm này
+                tv.LastVerifiedDeviceTicks = deviceNow.Ticks;
+                tv.LastVerifiedServerTicks = trustedNow.Ticks;
+            }
+            else
+            {
+                // Chưa từng verify server lần nào (lần đầu offline) -> tin device
+                trustedNow = deviceNow;
+                tv.LastVerifiedDeviceTicks = deviceNow.Ticks;
+                tv.LastVerifiedServerTicks = deviceNow.Ticks;
+            }
+        }
+
+        // --- Áp dụng logic claim dùng trustedNow thay vì DateTime.UtcNow ---
         long lastTimeTick = SaveLoadManager.Data.LastDailyRewardTime;
         DateTime lastRewardTime = new DateTime(lastTimeTick, DateTimeKind.Utc);
-        DateTime now = DateTime.UtcNow;
 
-        if (now.Date > lastRewardTime.Date)
+        if (trustedNow.Date > lastRewardTime.Date)
         {
             _canClaimToday = true;
 
-            // Nếu bỏ lỡ hơn 1 ngày, HOẶC đã nhận hết 7 ngày trước đó -> reset chuỗi về ngày 1
-            if ((now.Date - lastRewardTime.Date).TotalDays > 1 || SaveLoadManager.Data.CurrentDailyRewardDay >= 7)
+            if ((trustedNow.Date - lastRewardTime.Date).TotalDays > 1 || SaveLoadManager.Data.CurrentDailyRewardDay >= 7)
             {
                 SaveLoadManager.Data.CurrentDailyRewardDay = 0;
+            }
+
+            // Nếu phát hiện quá nhiều lần nhảy giờ bất thường -> Phạt reset chuỗi
+            if (tv.SuspiciousJumpCount >= 3)
+            {
+                Debug.LogWarning("[DailyReward] Quá nhiều lần phát hiện chỉnh giờ bất thường, reset chuỗi reward.");
+                SaveLoadManager.Data.CurrentDailyRewardDay = 0;
+                tv.SuspiciousJumpCount = 0; // Phạt xong thì tha
             }
         }
         else
@@ -43,6 +153,9 @@ public class DailyRewardManager : MonoBehaviour
             _canClaimToday = false;
         }
 
+        // Bắt buộc Save lại những thay đổi về TimeValidation
+        SaveLoadManager.Save();
+        
         UpdateUI();
     }
 
@@ -104,8 +217,9 @@ public class DailyRewardManager : MonoBehaviour
             }
         }
         
-        // Lưu lại thời gian và tăng ngày (Nếu lên 7 thì giữ nguyên số 7, để ngày mai CheckDailyReward mới reset về 0)
-        SaveLoadManager.Data.LastDailyRewardTime = DateTime.UtcNow.Ticks;
+        // Cập nhật bằng trusted time của server (nếu nãy offline thì nó lấy offset estimate)
+        // Vì CheckDailyReward đã lưu LastVerifiedServerTicks chuẩn nhất.
+        SaveLoadManager.Data.LastDailyRewardTime = SaveLoadManager.Data.TimeValidation.LastVerifiedServerTicks;
         SaveLoadManager.Data.CurrentDailyRewardDay++;
 
         SaveLoadManager.Save();
@@ -114,7 +228,7 @@ public class DailyRewardManager : MonoBehaviour
         UpdateUI();
     }
 
-    // ====== REWARD GIVERS (Tách riêng để dễ mở rộng) ======
+    // ====== REWARD GIVERS ======
 
     private void GiveGold(int amount)
     {
@@ -146,16 +260,12 @@ public class DailyRewardManager : MonoBehaviour
         }
         else
         {
-            // Skin đã có rồi → Đền bù bằng vàng
             SaveLoadManager.Data.Gold += 100;
             GoldDisplay.UpdateAll();
             Debug.Log($"[DailyReward] Skin {skinId} đã có, đền bù 100 Vàng");
         }
     }
 
-    /// <summary>
-    /// Mở Rương: Duyệt qua toàn bộ danh sách ChestContents và phát quà tương ứng.
-    /// </summary>
     private void GiveChestContents(List<RewardEntry> contents)
     {
         if (contents == null || contents.Count == 0) return;

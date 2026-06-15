@@ -2,6 +2,15 @@ using System;
 using System.Collections.Generic;
 
 [Serializable]
+public class TimeValidationData
+{
+    public long LastVerifiedServerTicks;   // Lần cuối server xác nhận giờ
+    public long LastVerifiedDeviceTicks;   // Giờ máy tại thời điểm đó (để tính offset)
+    public long LastAppOpenDeviceTicks;    // Giờ máy lần mở app gần nhất (chống rollback offline)
+    public int SuspiciousJumpCount;        // Đếm số lần phát hiện nhảy giờ bất thường
+}
+
+[Serializable]
 public class PlayerData
 {
     public int Gold;
@@ -16,6 +25,7 @@ public class PlayerData
     public LevelProgressData CurrentLevelProgress; // Lưu trạng thái ván chơi dang dở
     public int TotalScore;
     public int BestScore;
+    public TimeValidationData TimeValidation;
     
     // Khởi tạo giá trị mặc định cho người chơi mới
     public PlayerData()
