@@ -181,6 +181,7 @@ public class UIManager : MonoBehaviour
         {
             SaveLoadManager.Data.CurrentLevel = 1;
             SaveLoadManager.Data.CurrentLevelProgress = null;
+            SaveLoadManager.Data.TotalScore = 0;
             SaveLoadManager.Save();
         }
 

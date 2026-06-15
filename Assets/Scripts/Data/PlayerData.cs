@@ -13,6 +13,8 @@ public class PlayerData
     public List<int> BoostersOwned; // Lưu số lượng của 4 loại Booster
     public int CurrentLevel; // Cấp độ hiện tại của người chơi
     public LevelProgressData CurrentLevelProgress; // Lưu trạng thái ván chơi dang dở
+    public int TotalScore;
+    public int BestScore;
     
     // Khởi tạo giá trị mặc định cho người chơi mới
     public PlayerData()

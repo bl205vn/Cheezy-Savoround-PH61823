@@ -26,6 +26,11 @@ public static class SaveLoadManager
         if (Data != null)
         {
             Data.Gold += goldAdded;
+            Data.TotalScore += scoreAdded;
+            if (Data.TotalScore > Data.BestScore)
+            {
+                Data.BestScore = Data.TotalScore;
+            }
             // Không Save() liên tục để tránh I/O lag. Thay vào đó, gọi UpdateAll UI.
             GoldDisplay.UpdateAll();
         }
