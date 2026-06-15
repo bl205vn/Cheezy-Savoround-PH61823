@@ -49,6 +49,9 @@ public class DailyRewardManager : MonoBehaviour
     [Header("Reward Config (Dữ liệu từ ScriptableObject)")]
     [SerializeField] private DailyRewardConfig _config;
 
+    [Header("Text Format")]
+    [SerializeField] private string _dayPrefix = "DAY "; // Cho phép đổi chữ DAY thành chữ khác trên Inspector
+
     private bool _canClaimToday = false;
 
     private void Start()
@@ -177,7 +180,7 @@ public class DailyRewardManager : MonoBehaviour
                 
                 DailyRewardItem rewardItem = _config.Rewards[i];
                 
-                _dayItems[i].Setup(isClaimed, isCurrentDay, $"DAY {i + 1}", rewardItem.DisplayText, rewardItem.RewardIcon);
+                _dayItems[i].Setup(isClaimed, isCurrentDay, $"{_dayPrefix}{i + 1}", rewardItem.DisplayText, rewardItem.RewardIcon);
             }
         }
 

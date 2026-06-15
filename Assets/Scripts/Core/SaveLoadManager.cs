@@ -92,13 +92,8 @@ public static class SaveLoadManager
         {
             Data.CurrentSkinId = "plate_01";
         }
-        if (Data.Settings == null)
-        {
-            Data.Settings = new GameSettings();
-        }
-
-        // Apply TargetFPS
-        Application.targetFrameRate = Data.Settings.TargetFPS;
+        // Apply TargetFPS (hardcoded in GameSettings)
+        Application.targetFrameRate = GameSettings.TargetFPS;
     }
 
     /// <summary>

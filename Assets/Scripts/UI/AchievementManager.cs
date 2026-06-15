@@ -129,15 +129,17 @@ public class AchievementManager : MonoBehaviour
                 // ShowUnlockPopup(configItem);
             }
 
-            // Lưu ngược lại vào Data
+            // Lưu ngược lại vào Data (chỉ lưu trên RAM)
             SaveLoadManager.Data.Achievements[index] = saveData;
             isChanged = true;
         }
 
         if (isChanged)
         {
-            SaveLoadManager.Save();
-            RefreshUI();
+            // TỐI ƯU HIỆU NĂNG:
+            // Không gọi SaveLoadManager.Save() ở đây nữa để tránh việc nổ 1 đĩa lưu file 1 lần gây giật lag (Giảm thiểu I/O).
+            // Dữ liệu sẽ được tự động lưu vào ổ cứng khi người chơi đóng game/ẩn game (Hệ thống Meta Save hôm qua đã lo việc này)
+            // Hoặc lưu khi người chơi bấm nút Nhận thưởng (ClaimReward).
         }
     }
 

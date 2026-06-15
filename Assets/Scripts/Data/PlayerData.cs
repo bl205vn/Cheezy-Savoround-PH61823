@@ -19,7 +19,6 @@ public class PlayerData
     public long LastDailyRewardTime; // Lưu dưới dạng UTC Ticks
     public int CurrentDailyRewardDay; // Ngày hiện tại trong chuỗi 7 ngày (0 - 6)
     public List<AchievementSaveData> Achievements;
-    public GameSettings Settings;
     public List<int> BoostersOwned; // Lưu số lượng của 4 loại Booster
     public int CurrentLevel; // Cấp độ hiện tại của người chơi
     public LevelProgressData CurrentLevelProgress; // Lưu trạng thái ván chơi dang dở
@@ -36,7 +35,6 @@ public class PlayerData
         CurrentSkinId = "plate_01";
         LastDailyRewardTime = 0;
         Achievements = new List<AchievementSaveData>();
-        Settings = new GameSettings();
         BoostersOwned = new List<int>() { 0, 0, 0, 0 };
     }
 }
