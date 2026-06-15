@@ -12,4 +12,49 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d633432eb0c82b8468f42486544a300d, type: 3}
   m_Name: Achievement
   m_EditorClassIdentifier: 
-  Achievements: []
+  Achievements:
+  - Id: AC1
+    Description: "Gh\xE9p th\xE0nh c\xF4ng 50 \u0111\u0129a"
+    Type: 0
+    TargetGoal: 50
+    RewardType: 0
+    RewardAmount: 1000
+    BoosterType: 0
+    SkinId: 
+    RewardIcon: {fileID: 21300000, guid: 82fc9d71d227af340a1b634eb983a342, type: 3}
+  - Id: AC2
+    Description: "M\u1EDF kh\xF3a 5 lo\u1EA1i pizza"
+    Type: 1
+    TargetGoal: 5
+    RewardType: 1
+    RewardAmount: 5
+    BoosterType: 1
+    SkinId: 
+    RewardIcon: {fileID: 21300000, guid: 031272d07abc4da499d119367eae4de5, type: 3}
+  - Id: AC3
+    Description: "Qua 1 c\u1EA5p m\xE0 kh\xF4ng d\xF9ng Boost"
+    Type: 2
+    TargetGoal: 1
+    RewardType: 0
+    RewardAmount: 1000
+    BoosterType: 0
+    SkinId: 
+    RewardIcon: {fileID: 21300000, guid: 82fc9d71d227af340a1b634eb983a342, type: 3}
+  - Id: AC4
+    Description: "Thu th\u1EADp t\u1ED5ng 1000 Coin"
+    Type: 3
+    TargetGoal: 1000
+    RewardType: 0
+    RewardAmount: 5
+    BoosterType: 2
+    SkinId: 
+    RewardIcon: {fileID: 21300000, guid: 8358700bd939d524fa6c4ba6918b22d8, type: 3}
+  - Id: AC5
+    Description: "\u0110\u0103ng nh\u1EADp li\xEAn t\u1EE5c 7 ng\xE0y"
+    Type: 4
+    TargetGoal: 7
+    RewardType: 0
+    RewardAmount: 1000
+    BoosterType: 0
+    SkinId: 
+    RewardIcon: {fileID: 21300000, guid: 82fc9d71d227af340a1b634eb983a342, type: 3}
