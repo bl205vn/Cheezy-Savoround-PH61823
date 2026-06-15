@@ -16,6 +16,8 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip _successClip;
     [Tooltip("Tiếng thưởng Combo")]
     [SerializeField] private AudioClip _comboClip;
+    [Tooltip("Tiếng khi Game Over")]
+    [SerializeField] private AudioClip _gameOverClip;
     [SerializeField] private float _baseVolume = 1f;
 
     [Header("Pitch Shift (Hiệu ứng Combo)")]
@@ -48,6 +50,7 @@ public class AudioManager : MonoBehaviour
         GameEvents.OnPlatePlaced += HandlePlatePlaced;
         GameEvents.OnPlatePlaceFailed += HandlePlatePlaceFailed;
         GameEvents.OnPlateExploded += HandlePlateExploded;
+        GameEvents.OnGameOver += PlayGameOverSound;
     }
 
     private void OnDisable()
@@ -55,6 +58,7 @@ public class AudioManager : MonoBehaviour
         GameEvents.OnPlatePlaced -= HandlePlatePlaced;
         GameEvents.OnPlatePlaceFailed -= HandlePlatePlaceFailed;
         GameEvents.OnPlateExploded -= HandlePlateExploded;
+        GameEvents.OnGameOver -= PlayGameOverSound;
     }
 
     private void HandlePlatePlaced(PizzaPlate plate, GridCell cell) => PlayPlaceSound();
@@ -125,6 +129,14 @@ public class AudioManager : MonoBehaviour
         if (_comboClip != null && _sfxSource != null)
         {
             _sfxSource.PlayOneShot(_comboClip, _baseVolume);
+        }
+    }
+
+    public void PlayGameOverSound()
+    {
+        if (_gameOverClip != null && _sfxSource != null)
+        {
+            _sfxSource.PlayOneShot(_gameOverClip, _baseVolume);
         }
     }
 }
