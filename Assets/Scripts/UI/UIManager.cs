@@ -14,6 +14,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject _shopPanel;
     [SerializeField] private GameObject _achievementPanel;
     [SerializeField] private GameObject _howToPlayPanel;
+    [SerializeField] private GameObject _dailyPanel; // Thêm Daily Panel vào UIManager
 
     [Header("Backgrounds")]
     [SerializeField] private GameObject _lobbyBackground;
@@ -22,6 +23,7 @@ public class UIManager : MonoBehaviour
     [Header("In-Game")]
     [SerializeField] private GameObject _hudCanvas;
     [SerializeField] private ShopManager _shopManager; // Reference để gọi SwitchTab từ UIManager
+    [SerializeField] private DailyRewardManager _dailyRewardManager; // Reference để mở Daily Reward
 
     private bool _shopOpenedFromGame; // Cờ đánh dấu Shop được mở từ giữa game
 
@@ -55,6 +57,7 @@ public class UIManager : MonoBehaviour
         if (_shopPanel != null) _shopPanel.SetActive(_shopPanel == panelToShow);
         if (_achievementPanel != null) _achievementPanel.SetActive(_achievementPanel == panelToShow);
         if (_howToPlayPanel != null) _howToPlayPanel.SetActive(_howToPlayPanel == panelToShow);
+        if (_dailyPanel != null) _dailyPanel.SetActive(_dailyPanel == panelToShow);
     }
 
     // Các hàm Public để gắn vào OnClick() của các Button trong Lobby
@@ -62,6 +65,21 @@ public class UIManager : MonoBehaviour
     public void OpenAchievement() => ShowPanel(_achievementPanel);
     public void OpenHowToPlay() => ShowPanel(_howToPlayPanel);
     public void BackToStarter() => ShowPanel(_starterPanel);
+
+    /// <summary>
+    /// Mở bảng Daily Reward (Được quản lý như 1 panel của Lobby).
+    /// Gắn vào OnClick() của nút Daily trên Lobby.
+    /// </summary>
+    public void OpenDailyReward()
+    {
+        ShowPanel(_dailyPanel);
+        
+        // Gọi Manager để làm mới dữ liệu khi vừa mở lên
+        if (_dailyRewardManager != null)
+        {
+            _dailyRewardManager.CheckDailyReward();
+        }
+    }
 
     /// <summary>
     /// Gọi từ code: UIManager.Instance.OpenShopFromGame(tabIndex)

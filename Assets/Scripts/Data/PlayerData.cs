@@ -8,6 +8,7 @@ public class PlayerData
     public List<string> UnlockedSkins;
     public string CurrentSkinId;
     public long LastDailyRewardTime; // Lưu dưới dạng UTC Ticks
+    public int CurrentDailyRewardDay; // Ngày hiện tại trong chuỗi 7 ngày (0 - 6)
     public List<AchievementSaveData> Achievements;
     public GameSettings Settings;
     public List<int> BoostersOwned; // Lưu số lượng của 4 loại Booster
