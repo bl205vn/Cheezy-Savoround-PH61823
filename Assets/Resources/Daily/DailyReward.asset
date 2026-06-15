@@ -14,37 +14,113 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Rewards:
   - RewardType: 0
-    Amount: 0
-    BoosterIndex: 0
-    RewardIcon: {fileID: 0}
-    DisplayText: 
+    RewardIcon: {fileID: 21300000, guid: 88ac96fda8d0e5b4e963f25b470f07e6, type: 3}
+    DisplayText: 50
+    GoldAmount: 50
+    BoosterType: 0
+    BoosterAmount: 0
+    SkinId: 
+    ChestContents: []
+  - RewardType: 1
+    RewardIcon: {fileID: 21300000, guid: 768fe412aecce4a40ba84556a4f77c24, type: 3}
+    DisplayText: "TH\xCAM S\u1ED0T"
+    GoldAmount: 0
+    BoosterType: 1
+    BoosterAmount: 1
+    SkinId: 
+    ChestContents: []
   - RewardType: 0
-    Amount: 0
-    BoosterIndex: 0
-    RewardIcon: {fileID: 0}
-    DisplayText: 
+    RewardIcon: {fileID: 21300000, guid: efecacd033333564e921affeeaa1d135, type: 3}
+    DisplayText: 150
+    GoldAmount: 150
+    BoosterType: 0
+    BoosterAmount: 0
+    SkinId: 
+    ChestContents: []
+  - RewardType: 1
+    RewardIcon: {fileID: 21300000, guid: 1ab4b20e12fc102498bbc98c337a3f56, type: 3}
+    DisplayText: "TH\xD9NG R\xC1C"
+    GoldAmount: 0
+    BoosterType: 2
+    BoosterAmount: 1
+    SkinId: 
+    ChestContents: []
   - RewardType: 0
-    Amount: 0
-    BoosterIndex: 0
-    RewardIcon: {fileID: 0}
-    DisplayText: 
-  - RewardType: 0
-    Amount: 0
-    BoosterIndex: 0
-    RewardIcon: {fileID: 0}
-    DisplayText: 
-  - RewardType: 0
-    Amount: 0
-    BoosterIndex: 0
-    RewardIcon: {fileID: 0}
-    DisplayText: 
-  - RewardType: 0
-    Amount: 0
-    BoosterIndex: 0
-    RewardIcon: {fileID: 0}
-    DisplayText: 
-  - RewardType: 0
-    Amount: 0
-    BoosterIndex: 0
-    RewardIcon: {fileID: 0}
-    DisplayText: 
+    RewardIcon: {fileID: 21300000, guid: 810f56c511f0fce4a8bd47fc59abcb5f, type: 3}
+    DisplayText: 200
+    GoldAmount: 200
+    BoosterType: 0
+    BoosterAmount: 0
+    SkinId: 
+    ChestContents: []
+  - RewardType: 3
+    RewardIcon: {fileID: 21300000, guid: 8cbee9082096f3b449499bc59c111cee, type: 3}
+    DisplayText: "B\u1ED8 BOOST"
+    GoldAmount: 0
+    BoosterType: 0
+    BoosterAmount: 0
+    SkinId: 
+    ChestContents:
+    - RewardType: 1
+      GoldAmount: 0
+      BoosterType: 0
+      BoosterAmount: 1
+      SkinId: 
+    - RewardType: 1
+      GoldAmount: 0
+      BoosterType: 1
+      BoosterAmount: 1
+      SkinId: 
+    - RewardType: 1
+      GoldAmount: 0
+      BoosterType: 2
+      BoosterAmount: 1
+      SkinId: 
+    - RewardType: 1
+      GoldAmount: 0
+      BoosterType: 3
+      BoosterAmount: 1
+      SkinId: 
+  - RewardType: 3
+    RewardIcon: {fileID: 21300000, guid: 5b78dc8b12191014cab416fd2424c789, type: 3}
+    DisplayText: "TH\u01AF\u1EDENG L\u1EDAN"
+    GoldAmount: 0
+    BoosterType: 0
+    BoosterAmount: 0
+    SkinId: 
+    ChestContents:
+    - RewardType: 0
+      GoldAmount: 500
+      BoosterType: 0
+      BoosterAmount: 0
+      SkinId: 
+    - RewardType: 2
+      GoldAmount: 0
+      BoosterType: 0
+      BoosterAmount: 0
+      SkinId: plate_01
+    - RewardType: 2
+      GoldAmount: 0
+      BoosterType: 0
+      BoosterAmount: 0
+      SkinId: plate_02
+    - RewardType: 2
+      GoldAmount: 0
+      BoosterType: 0
+      BoosterAmount: 0
+      SkinId: plate_03
+    - RewardType: 2
+      GoldAmount: 0
+      BoosterType: 0
+      BoosterAmount: 0
+      SkinId: plate_04
+    - RewardType: 2
+      GoldAmount: 0
+      BoosterType: 0
+      BoosterAmount: 0
+      SkinId: plate_05
+    - RewardType: 2
+      GoldAmount: 0
+      BoosterType: 0
+      BoosterAmount: 0
+      SkinId: plate_06
