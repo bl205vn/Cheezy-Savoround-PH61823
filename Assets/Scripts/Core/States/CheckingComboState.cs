@@ -35,15 +35,9 @@ public class CheckingComboState : IGameState
                     GridManager.Instance.EvaluateTurnCombo();
                 }
 
-                // Kiểm tra Game Over ngay sau khi xử lý xong toàn bộ combo trên lưới
-                if (GridManager.Instance != null && GridManager.Instance.CheckGameOver())
-                {
-                    GameStateManager.Instance.TriggerGameOver();
-                }
-                else
-                {
-                    GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
-                }
+                // Luôn trả về PlayingState để TrayManager có cơ hội Refill khay đĩa (Khay đầy)
+                // Sau khi Refill xong, GameStateManager sẽ tự động check Game Over qua event OnRefillComplete.
+                GameStateManager.Instance.ChangeState(GameStateManager.Instance.Playing);
             }
         }
     }

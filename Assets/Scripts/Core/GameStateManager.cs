@@ -94,6 +94,18 @@ public class GameStateManager : MonoBehaviour
         // pauseStatus = true tức là App bị đẩy xuống chạy ngầm (Background)
         if (pauseStatus)
         {
+            if (CurrentState is GameOverState)
+            {
+                // Nếu đang ở màn hình thua mà thoát app ra nền -> Xoá file save ván này.
+                // Nếu app bị hệ điều hành tắt luôn, lần sau mở lên sẽ tự Restart.
+                // Nếu người chơi chỉ vuốt ra xem tin nhắn rồi quay lại (app chưa chết) thì trên màn hình vẫn giữ nguyên bảng GameOver.
+                if (SaveLoadManager.Data != null)
+                {
+                    SaveLoadManager.Data.CurrentLevel = 1;
+                    SaveLoadManager.Data.CurrentLevelProgress = null;
+                    SaveLoadManager.Data.TotalScore = 0;
+                }
+            }
             SaveLoadManager.Save();
             Debug.Log("[FSM] Ứng dụng đưa vào nền (Background). Đã kích hoạt lưu tiến trình tự động.");
         }
@@ -101,7 +113,16 @@ public class GameStateManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        // Khi người chơi đóng hoàn toàn ứng dụng (Kill Task)
+        // Đề phòng trường hợp hiếm hoi OS gọi hàm này thay vì Pause
+        if (CurrentState is GameOverState)
+        {
+            if (SaveLoadManager.Data != null)
+            {
+                SaveLoadManager.Data.CurrentLevel = 1;
+                SaveLoadManager.Data.CurrentLevelProgress = null;
+                SaveLoadManager.Data.TotalScore = 0;
+            }
+        }
         SaveLoadManager.Save();
         Debug.Log("[FSM] Ứng dụng chuẩn bị tắt. Đã kích hoạt lưu tiến trình tự động.");
     }

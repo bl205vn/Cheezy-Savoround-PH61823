@@ -168,6 +168,40 @@ public class UIManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Quay về sảnh chờ (Lobby) ĐỒNG THỜI xóa trắng toàn bộ dữ liệu để bắt đầu lại từ Level 1.
+    /// Dùng riêng cho nút Home khi người chơi muốn Reset & Quit cùng lúc.
+    /// </summary>
+    public void QuitAndResetToLobby()
+    {
+        // 1. Dọn dẹp hiệu ứng và dữ liệu hiện tại
+        DOTween.KillAll();
+        if (SaveLoadManager.Data != null)
+        {
+            SaveLoadManager.Data.CurrentLevel = 1;
+            SaveLoadManager.Data.CurrentLevelProgress = null;
+            SaveLoadManager.Data.TotalScore = 0;
+            SaveLoadManager.Save();
+        }
+
+        // 2. Load lại Level 1 để clear toàn bộ Grid/Tray trên màn hình
+        var levelProgress = FindFirstObjectByType<LevelProgressUI>();
+        if (levelProgress != null) levelProgress.ResetProgress();
+        if (LevelManager.Instance != null) LevelManager.Instance.LoadLevel(1);
+
+        // 3. Bật giao diện Lobby, tắt giao diện In-Game
+        ShowPanel(_starterPanel);
+        if (_lobbyBackground != null) _lobbyBackground.SetActive(true);
+        if (_inGameBackground != null) _inGameBackground.SetActive(false);
+        if (_hudCanvas != null) _hudCanvas.SetActive(false);
+
+        // 4. Quan trọng nhất: Đưa máy trạng thái về LOBBY (Không phải Playing)
+        if (GameStateManager.Instance != null)
+        {
+            GameStateManager.Instance.ChangeState(GameStateManager.Instance.Lobby);
+        }
+    }
+
+    /// <summary>
     /// Được gọi bởi Button "Restart" trong HUD (Góc trên bên phải)
     /// </summary>
     public void RestartGame()
