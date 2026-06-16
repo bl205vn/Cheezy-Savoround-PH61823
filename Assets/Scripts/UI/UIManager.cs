@@ -209,7 +209,7 @@ public class UIManager : MonoBehaviour
         }
 
         // 2. Load lại Level 1 để clear toàn bộ Grid/Tray trên màn hình
-        var levelProgress = FindFirstObjectByType<LevelProgressUI>();
+        var levelProgress = LevelProgressUI.Instance;
         if (levelProgress != null) levelProgress.ResetProgress();
         if (LevelManager.Instance != null) LevelManager.Instance.LoadLevel(1);
 
@@ -245,7 +245,7 @@ public class UIManager : MonoBehaviour
         }
 
         // 2. Reset thanh tiến trình
-        var levelProgress = FindFirstObjectByType<LevelProgressUI>();
+        var levelProgress = LevelProgressUI.Instance;
         if (levelProgress != null)
         {
             levelProgress.ResetProgress();

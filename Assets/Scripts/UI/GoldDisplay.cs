@@ -3,6 +3,8 @@ using TMPro;
 
 public class GoldDisplay : MonoBehaviour
 {
+    private static readonly System.Collections.Generic.List<GoldDisplay> _activeDisplays = new System.Collections.Generic.List<GoldDisplay>();
+
     [SerializeField] private TMP_Text _goldText;
 
     private void Start()
@@ -13,7 +15,13 @@ public class GoldDisplay : MonoBehaviour
 
     private void OnEnable()
     {
+        _activeDisplays.Add(this);
         UpdateGold();
+    }
+
+    private void OnDisable()
+    {
+        _activeDisplays.Remove(this);
     }
 
     public void UpdateGold()
@@ -27,10 +35,13 @@ public class GoldDisplay : MonoBehaviour
     // Hàm tiện lợi để update tất cả GoldDisplay trên Scene (ví dụ khi mua Boost/Skin)
     public static void UpdateAll()
     {
-        var displays = FindObjectsByType<GoldDisplay>(FindObjectsSortMode.None);
-        foreach (var d in displays)
+        // Duyệt qua danh sách đã đăng ký thay vì dùng FindObjectsByType (Gây giật lag khi gọi nhiều)
+        for (int i = 0; i < _activeDisplays.Count; i++)
         {
-            if (d != null) d.UpdateGold();
+            if (_activeDisplays[i] != null)
+            {
+                _activeDisplays[i].UpdateGold();
+            }
         }
     }
 }

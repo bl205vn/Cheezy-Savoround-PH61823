@@ -14,10 +14,19 @@ public class LevelProgressUI : MonoBehaviour
     
     private int _currentScore = 0;
 
+    public static LevelProgressUI Instance { get; private set; }
+
     public int CurrentScore => _currentScore;
     
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         // Kiểm tra và khởi tạo cấp độ mặc định (fix lỗi file JSON cũ)
         if (SaveLoadManager.Data != null && SaveLoadManager.Data.CurrentLevel <= 0)
         {
@@ -94,6 +103,10 @@ public class LevelProgressUI : MonoBehaviour
             SaveLoadManager.Data.CurrentLevelProgress = null; // Xoá tiến trình màn cũ để màn mới làm mới hoàn toàn
             SaveLoadManager.Save();
         }
+
+        // Phát event hoàn thành level để AchievementManager cập nhật thành tựu
+        // (Phải gọi TRƯỚC LoadNextLevel để achievement xử lý xong trước khi level mới bắt đầu)
+        GameEvents.TriggerLevelCompleted();
 
         UpdateLevelTexts();
         

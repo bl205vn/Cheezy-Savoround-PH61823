@@ -46,6 +46,10 @@ public class GridManager : MonoBehaviour
     // Relay 2-step: cache đích relay để push đúng sau khi epicenter đầy tạm. Key = epicenter cell.
     private readonly Dictionary<GridCell, (int type, GridCell dest)> _pendingRelays = new Dictionary<GridCell, (int, GridCell)>();
 
+    // Cache buffer cho BFS trong CalculatePriorities
+    private readonly Queue<GridCell> _bfsQueue = new Queue<GridCell>();
+    private readonly HashSet<GridCell> _bfsVisited = new HashSet<GridCell>();
+
     private void EnqueueCell(GridCell cell)
     {
         if (cell == null || !cell.IsOccupied) return;
@@ -167,6 +171,8 @@ public class GridManager : MonoBehaviour
         _enqueueOrder.Clear();
         _enqueueCounter = 0;
         _pendingRelays.Clear();
+        _bfsQueue.Clear();
+        _bfsVisited.Clear();
     }
 
     private void OnEnable()
@@ -201,29 +207,29 @@ public class GridManager : MonoBehaviour
 
         if (startCell == null || !startCell.IsOccupied) return;
 
-        Queue<GridCell> bfsQueue = new Queue<GridCell>();
-        HashSet<GridCell> visited = new HashSet<GridCell>();
+        _bfsQueue.Clear();
+        _bfsVisited.Clear();
 
-        bfsQueue.Enqueue(startCell);
-        visited.Add(startCell);
+        _bfsQueue.Enqueue(startCell);
+        _bfsVisited.Add(startCell);
         startCell.CurrentPlate.Priority = 9; // Tâm chấn
 
-        while (bfsQueue.Count > 0)
+        while (_bfsQueue.Count > 0)
         {
-            GridCell current = bfsQueue.Dequeue();
+            GridCell current = _bfsQueue.Dequeue();
             int currentPrio = current.CurrentPlate.Priority;
 
             foreach (var dir in _directions)
             {
                 GridCell neighbor = GetCell(current.GridPosition + dir);
-                if (neighbor != null && neighbor.IsOccupied && !visited.Contains(neighbor))
+                if (neighbor != null && neighbor.IsOccupied && !_bfsVisited.Contains(neighbor))
                 {
-                    visited.Add(neighbor);
+                    _bfsVisited.Add(neighbor);
                     int nextPrio = Mathf.Max(0, currentPrio - 1);
                     neighbor.CurrentPlate.Priority = nextPrio;
                     if (nextPrio > 0)
                     {
-                        bfsQueue.Enqueue(neighbor);
+                        _bfsQueue.Enqueue(neighbor);
                     }
                 }
             }

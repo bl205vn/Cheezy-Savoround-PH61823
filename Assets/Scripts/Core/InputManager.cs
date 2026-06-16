@@ -17,7 +17,7 @@ public class InputManager : MonoBehaviour
 
     private readonly RaycastHit[] _hitBuffer = new RaycastHit[10];
 
-    private struct HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>
+    private class HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>
     {
         public int Compare(RaycastHit x, RaycastHit y)
         {

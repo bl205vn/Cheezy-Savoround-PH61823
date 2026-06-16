@@ -27,9 +27,7 @@ public static class GameEvents
     public static event Action<string> OnSkinChanged;
     public static void TriggerSkinChanged(string newSkinId) => OnSkinChanged?.Invoke(newSkinId);
 
-    // Cập nhật thêm cho hệ thống Achievement
-    public static event Action<int> OnPizzaMerged;
-    public static void TriggerPizzaMerged(int count) => OnPizzaMerged?.Invoke(count);
+    // === Achievement System Events ===
 
     public static event Action OnLevelCompleted;
     public static void TriggerLevelCompleted() => OnLevelCompleted?.Invoke();

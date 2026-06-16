@@ -50,7 +50,7 @@ public static class SaveLoadManager
                 Data.CurrentLevelProgress.occupiedCells = GridManager.Instance.CaptureState();
                 Data.CurrentLevelProgress.traySlots = TrayManager.Instance.CaptureState();
 
-                var levelProgressUI = Object.FindFirstObjectByType<LevelProgressUI>();
+                var levelProgressUI = LevelProgressUI.Instance;
                 if (levelProgressUI != null)
                 {
                     Data.CurrentLevelProgress.currentScore = levelProgressUI.CurrentScore;

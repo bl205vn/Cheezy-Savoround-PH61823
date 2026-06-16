@@ -58,8 +58,21 @@ public class BoostButton : MonoBehaviour
 
         if (count > 0)
         {
-            // TODO: Logic sử dụng Boost (gọi GridManager xử lý)
-            Debug.Log($"Đang sử dụng boost: {_boosterType}");
+            // TODO: Logic áp dụng hiệu ứng Boost lên GridManager (cắt bánh, xoá đĩa...)
+            // Khi logic gameplay của Booster hoàn thiện, bọc phần dưới đây trong if (ApplyBooster())
+            // để chỉ trừ booster khi hiệu ứng thực sự áp dụng thành công.
+            
+            // Trừ số lượng Booster trong Data
+            data.BoostersOwned[typeIndex]--;
+            
+            // Phát event để AchievementManager biết người chơi đã dùng Booster
+            // (ảnh hưởng thành tựu LevelCompletedNoBooster)
+            GameEvents.TriggerBoosterUsed();
+            
+            // Cập nhật UI hiển thị số lượng mới
+            UpdateQuantityDisplay();
+            
+            Debug.Log($"[BoostButton] Đã sử dụng boost: {_boosterType}, còn lại: {data.BoostersOwned[typeIndex]}");
         }
         else
         {

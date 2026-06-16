@@ -106,8 +106,8 @@ public class AchievementManager : MonoBehaviour
             // Xử lý riêng biệt với UnlockCakes (cần đếm tổng Skin hiện có)
             if (type == AchievementType.UnlockCakes)
             {
-                // Đếm số lượng skin người chơi đang có (trừ skin mặc định plate_01)
-                int unlockedCount = SaveLoadManager.Data.UnlockedSkins.Count;
+                // Đếm số lượng skin đã mở khóa THÊM (trừ skin mặc định plate_01 luôn có sẵn)
+                int unlockedCount = SaveLoadManager.Data.UnlockedSkins.Count - 1;
                 if (unlockedCount > saveData.Progress)
                 {
                     saveData.Progress = unlockedCount;
