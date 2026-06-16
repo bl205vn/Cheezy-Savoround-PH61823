@@ -43,7 +43,7 @@ public class GridCell : MonoBehaviour
         return transform.position + new Vector3(0, _snapOffsetY, 0);
     }
 
-    public void PlacePlate(PizzaPlate plate)
+    public void PlacePlate(PizzaPlate plate, System.Action onSnapComplete = null)
     {
         IsOccupied = true;
         CurrentPlate = plate;
@@ -52,17 +52,34 @@ public class GridCell : MonoBehaviour
         
         // Cập nhật data trước để ghi nhận _baseScale đúng với parent mới
         plate.PlaceAt(snapPosition, transform);
+        plate.FitToSize(GridManager.Instance.CellSpacing);
         
         // Gọi Coroutine nhảy vào ô và chạy hiệu ứng Squash sau khi xong
         plate.StartCoroutine(plate.AnimateToCell(plate.transform.position, snapPosition, 0.25f, () => 
         {
-            plate.PlaySnapEffect();
+            plate.PlaySnapEffect(onSnapComplete);
         }));
+    }
+
+    public void PlacePlateInstant(PizzaPlate plate)
+    {
+        IsOccupied = true;
+        CurrentPlate = plate;
+        Vector3 snapPosition = new Vector3(transform.position.x, transform.position.y + _snapOffsetY, transform.position.z);
+        plate.PlaceAt(snapPosition, transform);
+        plate.FitToSize(GridManager.Instance.CellSpacing);
+        plate.transform.position = snapPosition; // Set position directly without animation
     }
 
     public void ClearPlate()
     {
         IsOccupied = false;
         CurrentPlate = null;
+    }
+
+    public void RestorePlateLogical(PizzaPlate plate)
+    {
+        IsOccupied = true;
+        CurrentPlate = plate;
     }
 }

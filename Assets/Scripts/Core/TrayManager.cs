@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class TrayManager : MonoBehaviour
@@ -7,6 +9,8 @@ public class TrayManager : MonoBehaviour
 
     [SerializeField] private float _slotSpacing; // Khoảng cách giữa các slot
     [SerializeField] private GameObject _pizzaPlatePrefab; // Prefab đĩa pizza
+
+    public static event Action OnRefillComplete;
 
     // Lưu trữ các slot anchor (empty GO) để quản lý vòng đời
     private readonly List<GameObject> _slotAnchors = new List<GameObject>();
@@ -28,13 +32,13 @@ public class TrayManager : MonoBehaviour
 
     private void OnEnable()
     {
-        InputManager.OnPlatePlaced += HandlePlatePlacedOnGrid;
+        GameEvents.OnPlatePlaced += HandlePlatePlacedOnGrid;
         GameStateManager.OnStateChanged += HandleStateChanged;
     }
 
     private void OnDisable()
     {
-        InputManager.OnPlatePlaced -= HandlePlatePlacedOnGrid;
+        GameEvents.OnPlatePlaced -= HandlePlatePlacedOnGrid;
         GameStateManager.OnStateChanged -= HandleStateChanged;
     }
 
@@ -49,13 +53,9 @@ public class TrayManager : MonoBehaviour
             if (_slotPlates[i] == plate)
             {
                 _slotPlates[i] = null;
+                _pendingRefill = true; // Bật cờ refill ngay khi có 1 slot trống
                 break;
             }
-        }
-
-        if (IsAllSlotsEmpty())
-        {
-            _pendingRefill = true;
         }
     }
 
@@ -105,7 +105,7 @@ public class TrayManager : MonoBehaviour
     /// Khởi tạo khay chứa: tạo các anchor slot + sinh batch đĩa đầu tiên.
     /// Được gọi bởi LevelManager khi load level.
     /// </summary>
-    public void GenerateTray(int slotCount)
+    public void GenerateTray(int slotCount, bool refillImmediately = true)
     {
         ClearTray();
 
@@ -134,9 +134,16 @@ public class TrayManager : MonoBehaviour
         }
 
         // Sinh batch đĩa đầu tiên
-        RefillTray();
+        if (refillImmediately)
+        {
+            RefillTray();
+        }
+        else
+        {
+            _pendingRefill = true;
+        }
 
-        Debug.Log($"[TrayManager] Đã tạo khay {slotCount} slot + sinh batch đĩa đầu tiên.");
+        Debug.Log($"[TrayManager] Đã tạo khay {slotCount} slot.");
     }
 
     /// <summary>
@@ -165,7 +172,7 @@ public class TrayManager : MonoBehaviour
             GameObject plateObj = plate.gameObject;
 
             // Ép scale đĩa pizza theo kích thước slot
-            FitPlateToSlot(plateObj);
+            plate.FitToSize(_slotSpacing);
             plate.Initialize(anchor.transform);
             plate.GenerateRandomSlices(); // Sinh bánh ngẫu nhiên từ JSON config
 
@@ -174,40 +181,34 @@ public class TrayManager : MonoBehaviour
         }
 
         Debug.Log($"[TrayManager] Refill: Sinh {refillCount} đĩa mới trên khay.");
-    }
-
-    /// <summary>
-    /// Ép scale prefab vào đúng kích thước 1 slot dựa trên Renderer bounds.
-    /// </summary>
-    private void FitPlateToSlot(GameObject plateObj)
-    {
-        Renderer rend = plateObj.GetComponentInChildren<Renderer>();
-        if (rend == null) return;
-
-        Vector3 currentSize = rend.bounds.size;
         
-        // Chỉ scale theo trục X và Z (mặt phẳng ngang), giữ nguyên tỷ lệ Y
-        float scaleX = (currentSize.x > 0.001f) ? (_slotSpacing / currentSize.x) : 1f;
-        float scaleZ = (currentSize.z > 0.001f) ? (_slotSpacing / currentSize.z) : 1f;
-        
-        // Dùng scale nhỏ nhất để giữ tỷ lệ, khít hoàn toàn
-        float uniformScale = Mathf.Min(scaleX, scaleZ);
-        
-        plateObj.transform.localScale = plateObj.transform.localScale * uniformScale;
+        if (refillCount > 0)
+        {
+            OnRefillComplete?.Invoke();
+        }
     }
 
     private void ClearTray()
     {
-        // Xóa tham chiếu đĩa
+        // Trả đĩa về Pool trước khi xóa
         if (_slotPlates != null)
         {
             for (int i = 0; i < _slotPlates.Length; i++)
             {
-                _slotPlates[i] = null;
+                if (_slotPlates[i] != null)
+                {
+                    _slotPlates[i].transform.DOKill(); // Kill tween treo trước khi trả pool
+                    _slotPlates[i].ClearSlices();
+                    if (ObjectPoolManager.Instance != null)
+                    {
+                        ObjectPoolManager.Instance.ReturnPizzaPlate(_slotPlates[i]);
+                    }
+                    _slotPlates[i] = null;
+                }
             }
         }
 
-        // Hủy anchor (và đĩa con theo hierarchy)
+        // Hủy anchor
         foreach (var anchor in _slotAnchors)
         {
             if (anchor != null)
@@ -217,6 +218,88 @@ public class TrayManager : MonoBehaviour
         }
         _slotAnchors.Clear();
         _pendingRefill = false;
+    }
+
+    public List<int[]> CaptureState()
+    {
+        List<int[]> traySlots = new List<int[]>();
+        if (_slotPlates == null) return traySlots;
+        
+        int maxSlices = LevelManager.CurrentLevelData.maxSlices;
+        for (int i = 0; i < _slotPlates.Length; i++)
+        {
+            if (_slotPlates[i] != null)
+            {
+                int[] types = new int[maxSlices];
+                PizzaSliceVisual[] slices = _slotPlates[i].Slices;
+                for (int s = 0; s < maxSlices; s++)
+                {
+                    if (s < slices.Length && slices[s] != null)
+                    {
+                        types[s] = slices[s].TypeIndex;
+                    }
+                    else
+                    {
+                        types[s] = -1;
+                    }
+                }
+                traySlots.Add(types);
+            }
+            else
+            {
+                traySlots.Add(null); // Slot trống
+            }
+        }
+        return traySlots;
+    }
+
+    public void RestoreState(List<int[]> savedSlots)
+    {
+        if (savedSlots == null || _slotAnchors == null || savedSlots.Count != _slotAnchors.Count) return;
+        
+        _pendingRefill = false;
+        int maxSlices = LevelManager.CurrentLevelData.maxSlices;
+
+        for (int i = 0; i < savedSlots.Count; i++)
+        {
+            int[] types = savedSlots[i];
+            
+            // Xoá đĩa cũ nếu có
+            if (_slotPlates[i] != null)
+            {
+                _slotPlates[i].ClearSlices();
+                ObjectPoolManager.Instance.ReturnPizzaPlate(_slotPlates[i]);
+                _slotPlates[i] = null;
+            }
+
+            if (types == null)
+            {
+                _pendingRefill = true; // Có slot trống
+                continue;
+            }
+
+            GameObject anchor = _slotAnchors[i];
+            Vector3 worldPos = anchor.transform.position;
+
+            PizzaPlate plate = ObjectPoolManager.Instance.GetPizzaPlate();
+            plate.transform.position = worldPos;
+            plate.transform.rotation = Quaternion.identity;
+            plate.transform.SetParent(anchor.transform);
+            
+            plate.FitToSize(_slotSpacing);
+            plate.Initialize(anchor.transform);
+            
+            plate.RestoreSlices(types); // Sinh bánh cố định theo data
+            plate.ApplyCurrentSkin();
+
+            _slotPlates[i] = plate;
+        }
+
+        // Kiểm tra xem tất cả có trống không
+        if (IsAllSlotsEmpty())
+        {
+            _pendingRefill = true;
+        }
     }
 
 #if UNITY_EDITOR

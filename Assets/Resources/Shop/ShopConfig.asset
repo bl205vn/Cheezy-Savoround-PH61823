@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21bed11df0c1f714f9f0e65cd3ce5f7a, type: 3}
+  m_Name: ShopConfig
+  m_EditorClassIdentifier: 
+  Skins:
+  - Id: plate_01
+    DisplayName: "\u0110\u0129a tr\u1EAFng"
+    Price: 100
+    Texture: {fileID: 2800000, guid: fbec4d870715354408e9b3aaa35ab29b, type: 3}
+  - Id: plate_02
+    DisplayName: "\u0110\u0129a trang tr\u1ECDng"
+    Price: 100
+    Texture: {fileID: 2800000, guid: fe0518dcafb2705469dafe04946cffb3, type: 3}
+  - Id: plate_03
+    DisplayName: "\u0110\u0129a ch\u1EADu hoa"
+    Price: 100
+    Texture: {fileID: 2800000, guid: ea8b327eec0a8c947aa3eae0c3a91ef5, type: 3}
+  - Id: plate_04
+    DisplayName: "\u0110\u0129a g\u01B0\u01A1ng"
+    Price: 100
+    Texture: {fileID: 2800000, guid: 5c6edbf6a6c90a947a9618213cb7aa68, type: 3}
+  - Id: plate_05
+    DisplayName: "\u0110\u0129a m\u1EB7t tr\u1EDDi"
+    Price: 100
+    Texture: {fileID: 2800000, guid: 05f3c0350ce01d7428ddb73c0706c0a9, type: 3}
+  - Id: plate_06
+    DisplayName: "H\u1ED3ng"
+    Price: 100
+    Texture: {fileID: 2800000, guid: 67117bc40e7a4af42bc212407275e9b9, type: 3}
+  Boosters:
+  - Id: Boost01
+    DisplayName: "Th\xEAm \u0111\u0129a b\xE1nh"
+    Price: 100
+    Icon: {fileID: 21300000, guid: dc0d80e80bb19604582b305d06af4ab5, type: 3}
+  - Id: Boost02
+    DisplayName: "Th\xEAm mi\u1EBFng b\xE1nh"
+    Price: 100
+    Icon: {fileID: 21300000, guid: 6a5322d4047ecc045ac666252fcc0898, type: 3}
+  - Id: Boost03
+    DisplayName: "V\u1EE9t \u0111\u0129a v\xE0o th\xF9ng r\xE1c"
+    Price: 100
+    Icon: {fileID: 21300000, guid: 2e023dcd718a74446baf50dbfbbe7bd4, type: 3}
+  - Id: Boost04
+    DisplayName: "\u0110\u1ED5i v\u1ECB tr\xED \u0111\u0129a"
+    Price: 100
+    Icon: {fileID: 21300000, guid: f6e7f0fab7762f04aa206f60ba3230a7, type: 3}
+  CoinPacks:
+  - Id: CoinPack01
+    DisplayName: "V\xE0i xu l\u1EBB"
+    PriceString: 0.99$
+    RewardAmount: 300
+    Icon: {fileID: 21300000, guid: d0415a94ec2a9294e950d700b35753e8, type: 3}
+  - Id: CoinPack02
+    DisplayName: "T\xFAi coin nh\u1ECF"
+    PriceString: 1.99$
+    RewardAmount: 800
+    Icon: {fileID: 21300000, guid: 9eb8677ad8eeb884a92e1ca633f4c56b, type: 3}
+  - Id: CoinPack03
+    DisplayName: "T\xFAi coin l\u1EDBn"
+    PriceString: 3.99$
+    RewardAmount: 2000
+    Icon: {fileID: 21300000, guid: 5f0d0e61d17281c4799440306dd1ded7, type: 3}
+  - Id: CoinPack04
+    DisplayName: "H\xF2m coin"
+    PriceString: 4.99$
+    RewardAmount: 65000
+    Icon: {fileID: 21300000, guid: db5756b59c93c2e458cfd848fd443462, type: 3}

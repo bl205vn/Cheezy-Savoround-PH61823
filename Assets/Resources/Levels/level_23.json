@@ -1,9 +1,23 @@
 {
     "levelId": 23,
     "gridWidth": 4,
-    "gridHeight": 4,
+    "gridHeight": 5,
     "holdSlotCount": 3,
     "maxSlices": 6,
-    "availablePizzaTypes": [],
-    "sliceCountProbabilities": []
+    "availablePizzaTypes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+    ],
+    "sliceCountProbabilities": [
+        19.44827651977539,
+        23.172412872314454,
+        22.413793563842775,
+        19.068965911865236,
+        10.413793563842774,
+        5.482758522033691
+    ]
 }

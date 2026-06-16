@@ -17,7 +17,7 @@ public class InputManager : MonoBehaviour
 
     private readonly RaycastHit[] _hitBuffer = new RaycastHit[10];
 
-    private struct HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>
+    private class HitDistanceComparer : System.Collections.Generic.IComparer<RaycastHit>
     {
         public int Compare(RaycastHit x, RaycastHit y)
         {
@@ -26,7 +26,7 @@ public class InputManager : MonoBehaviour
     }
     private readonly HitDistanceComparer _hitComparer = new HitDistanceComparer();
 
-    public static event Action<PizzaPlate, GridCell> OnPlatePlaced;
+    // Event giờ đã được quản lý tập trung ở GameEvents.cs
 
     private void Awake()
     {
@@ -59,6 +59,36 @@ public class InputManager : MonoBehaviour
             return;
         }
 
+        // Ưu tiên BoosterManager nếu đang chờ target (di chuyển/xóa đĩa)
+        if (BoosterManager.Instance != null && BoosterManager.Instance.IsWaitingForTarget)
+        {
+            if (BoosterManager.Instance.IsMoveBoosterActive)
+            {
+                // Cho phép kéo thả bình thường (bỏ qua return để chạy TryPickUpPlate ở dưới)
+            }
+            else
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    if (UnityEngine.EventSystems.EventSystem.current != null)
+                    {
+                        if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() ||
+                            (Input.touchCount > 0 && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId)))
+                        {
+                            return; // Bỏ qua nếu chạm vào UI
+                        }
+                    }
+
+                    Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+                    if (Physics.Raycast(ray, out RaycastHit hit))
+                    {
+                        BoosterManager.Instance.HandleTap(hit);
+                    }
+                }
+                return; // Khóa input thường đối với các Booster khác (như Trash)
+            }
+        }
+
         if (Input.GetMouseButtonDown(0))
         {
             TryPickUpPlate();
@@ -75,16 +105,37 @@ public class InputManager : MonoBehaviour
 
     private void TryPickUpPlate()
     {
+        // Chặn tương tác nếu người chơi đang bấm vào UI (cả chuột và touch trên mobile)
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() ||
+                (Input.touchCount > 0 && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId)))
+            {
+                return;
+            }
+        }
+
         Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
             if (hit.collider.TryGetComponent(out PizzaPlate plate))
             {
-                // Chỉ cho phép bốc đĩa từ khay VÀ đĩa đó không phải đang bay về khay
-                if (TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate) && !plate.IsReturning)
+                // Nếu đang dùng Move Booster, cho phép bốc đĩa từ Grid
+                bool isMoveBooster = BoosterManager.Instance != null && BoosterManager.Instance.IsMoveBoosterActive;
+                GridCell plateCell = GridManager.Instance != null ? GridManager.Instance.GetCellOfPlate(plate) : null;
+                
+                bool fromTray = TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate);
+                bool fromGridAndBoosted = isMoveBooster && plateCell != null;
+
+                if ((fromTray || fromGridAndBoosted) && !plate.IsReturning)
                 {
                     _draggedPlate = plate;
                     _draggedPlate.PickUp();
+                    
+                    if (fromGridAndBoosted)
+                    {
+                        plateCell.ClearPlate(); // Nhấc khỏi lưới
+                    }
                 }
             }
         }
@@ -122,8 +173,18 @@ public class InputManager : MonoBehaviour
             {
                 if (_ghostPreview != null)
                 {
-                    // Lấy đúng scale gốc của đĩa (khi đang nằm trên mâm/bàn) để gán cho Ghost
-                    _ghostPreview.transform.localScale = _draggedPlate.BaseScale;
+                    // Scale bóng mờ theo world scale của đĩa (kể cả khi đĩa nằm trên GridCell bị scale)
+                    Vector3 ghostScale = _draggedPlate.BaseScale;
+                    if (_draggedPlate.OriginalParent != null)
+                    {
+                        Vector3 parentScale = _draggedPlate.OriginalParent.lossyScale;
+                        ghostScale = new Vector3(
+                            _draggedPlate.BaseScale.x * parentScale.x,
+                            _draggedPlate.BaseScale.y * parentScale.y,
+                            _draggedPlate.BaseScale.z * parentScale.z
+                        );
+                    }
+                    _ghostPreview.transform.localScale = ghostScale;
                     _ghostPreview.ShowAt(currentTargetCell.GetDropPosition());
                 }
             }
@@ -164,18 +225,45 @@ public class InputManager : MonoBehaviour
             var hit = _hitBuffer[i];
             if (hit.collider.TryGetComponent(out GridCell cell) && !cell.IsOccupied)
             {
-                // Snap vào ô lưới
-                cell.PlacePlate(_draggedPlate);
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayPlaceSound();
-                OnPlatePlaced?.Invoke(_draggedPlate, cell);
+                // Thay đổi trạng thái FSM ngay lập tức sang Animating để block input người chơi
+                if (GameStateManager.Instance != null)
+                {
+                    GameStateManager.Instance.ChangeState(GameStateManager.Instance.Animating);
+                }
+
+                PizzaPlate plateToPlace = _draggedPlate;
                 _draggedPlate = null;
+
+                if (BoosterManager.Instance != null && BoosterManager.Instance.IsMoveBoosterActive)
+                {
+                    BoosterManager.Instance.CompleteMoveBooster();
+                }
+
+                // Snap vào ô lưới và chờ animation xong mới bắn event
+                cell.PlacePlate(plateToPlace, () => {
+                    GameEvents.TriggerPlatePlaced(plateToPlace, cell);
+                });
+                
                 return; // Thành công
             }
         }
 
         // Không tìm thấy ô hoặc ô đã có đĩa -> trả về chỗ cũ
+        GameEvents.TriggerPlatePlaceFailed(_draggedPlate);
+        
+        if (BoosterManager.Instance != null && BoosterManager.Instance.IsMoveBoosterActive)
+        {
+            if (_draggedPlate.OriginalParent != null)
+            {
+                GridCell originalCell = _draggedPlate.OriginalParent.GetComponent<GridCell>();
+                if (originalCell != null)
+                {
+                    originalCell.RestorePlateLogical(_draggedPlate);
+                }
+            }
+        }
+        
         _draggedPlate.PlayShakeAndReturn();
-        if (AudioManager.Instance != null) AudioManager.Instance.PlayErrorSound();
         _draggedPlate = null;
     }
 }

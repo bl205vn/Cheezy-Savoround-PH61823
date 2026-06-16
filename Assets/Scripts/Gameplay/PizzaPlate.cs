@@ -21,6 +21,7 @@ public class PizzaPlate : MonoBehaviour
 
     private Vector3 _originalPosition;
     private Transform _originalParent;
+    public Transform OriginalParent => _originalParent;
     private PizzaSliceVisual[] _slices; // Mảng chứa các miếng theo index/góc quay
 
     public PizzaSliceVisual[] Slices => _slices; // Cho phép các Manager đọc dữ liệu miếng bánh trên đĩa
@@ -32,6 +33,11 @@ public class PizzaPlate : MonoBehaviour
     // --- ZERO GC BUFFERS ---
     private readonly System.Collections.Generic.Dictionary<int, int> _typeCountBuffer = new System.Collections.Generic.Dictionary<int, int>();
     private readonly System.Collections.Generic.List<int> _availableTypesBuffer = new System.Collections.Generic.List<int>();
+    
+    // Static buffer cho MaterialPropertyBlock để tái sử dụng toàn cục, tuân thủ Zero-GC
+    private static MaterialPropertyBlock _propBlock;
+    private static ShopConfig _shopConfig;
+    private Renderer _plateRenderer;
     public void Initialize(Transform parentSlot)
     {
         _originalParent = parentSlot;
@@ -39,6 +45,94 @@ public class PizzaPlate : MonoBehaviour
         transform.localPosition = new Vector3(0, _spawnHeight, 0); // Sinh cách khoảng y
         _originalPosition = transform.position;
         _baseScale = transform.localScale; // Cập nhật scale gốc để dùng cho các logic UI/Ghost
+        
+        ApplyCurrentSkin();
+    }
+
+    public void FitToSize(float targetWidth)
+    {
+        if (_plateRenderer == null) _plateRenderer = GetComponentInChildren<Renderer>();
+        if (_plateRenderer == null) return;
+
+        transform.localScale = Vector3.one;
+        Vector3 size = _plateRenderer.bounds.size;
+        float scaleX = (size.x > 0.001f) ? (targetWidth / size.x) : 1f;
+        float scaleZ = (size.z > 0.001f) ? (targetWidth / size.z) : 1f;
+        float uniform = Mathf.Min(scaleX, scaleZ);
+        transform.localScale = Vector3.one * uniform;
+        _baseScale = transform.localScale;
+    }
+
+    private void OnEnable()
+    {
+        GameEvents.OnSkinChanged += HandleSkinChanged;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnSkinChanged -= HandleSkinChanged;
+    }
+
+    private void HandleSkinChanged(string skinId)
+    {
+        ApplyCurrentSkin();
+    }
+
+    public void ApplyCurrentSkin()
+    {
+        if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
+        if (_shopConfig == null) 
+        {
+            // Sửa lại đường dẫn do file nằm trong thư mục Resources/Shop
+            _shopConfig = Resources.Load<ShopConfig>("Shop/ShopConfig");
+            if (_shopConfig == null) Debug.LogError("[PizzaPlate] KHÔNG TÌM THẤY ShopConfig! Hãy kiểm tra lại tên file và đường dẫn.");
+        }
+        
+        if (_plateRenderer == null)
+        {
+            _plateRenderer = GetComponentInChildren<Renderer>();
+            if (_plateRenderer == null) Debug.LogError("[PizzaPlate] Không tìm thấy Renderer trên Prefab đĩa!");
+        }
+
+        if (_shopConfig != null && _plateRenderer != null && SaveLoadManager.Data != null)
+        {
+            string skinId = SaveLoadManager.Data.CurrentSkinId;
+            SkinData currentSkin = _shopConfig.GetSkin(skinId);
+            
+            if (currentSkin != null && currentSkin.Texture != null)
+            {
+                _plateRenderer.GetPropertyBlock(_propBlock);
+                
+                _propBlock.SetTexture("Main_Texture", currentSkin.Texture);
+                _propBlock.SetTexture("_Main_Texture", currentSkin.Texture);
+                _propBlock.SetTexture("_BaseMap", currentSkin.Texture);
+                _propBlock.SetTexture("_MainTex", currentSkin.Texture);
+                
+                _plateRenderer.SetPropertyBlock(_propBlock);
+                Debug.Log($"[PizzaPlate] Đã áp dụng skin: {skinId} thành công lên đĩa!");
+            }
+            else
+            {
+                Debug.LogError($"[PizzaPlate] Lỗi: Không tìm thấy SkinData cho ID '{skinId}' trong ShopConfig hoặc Texture bị trống.");
+            }
+        }
+    }
+
+    public void ApplySkinDirectly(Texture2D texture)
+    {
+        if (texture == null) return;
+        if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
+        if (_plateRenderer == null) _plateRenderer = GetComponentInChildren<Renderer>();
+
+        if (_plateRenderer != null)
+        {
+            _plateRenderer.GetPropertyBlock(_propBlock);
+            _propBlock.SetTexture("Main_Texture", texture);
+            _propBlock.SetTexture("_Main_Texture", texture);
+            _propBlock.SetTexture("_BaseMap", texture);
+            _propBlock.SetTexture("_MainTex", texture);
+            _plateRenderer.SetPropertyBlock(_propBlock);
+        }
     }
 
     public void PickUp()
@@ -127,7 +221,7 @@ public class PizzaPlate : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    public void PlaySnapEffect()
+    public void PlaySnapEffect(System.Action onComplete = null)
     {
         transform.DOKill();
         transform.localScale = _baseScale; // Reset lại scale gốc trong trường hợp tween cũ bị ngắt quãng
@@ -140,12 +234,17 @@ public class PizzaPlate : MonoBehaviour
         seq.Append(transform.DOScale(squashScale, _snapSquashDuration).SetEase(Ease.OutQuad));
         seq.Append(transform.DOScale(stretchScale, _snapSquashDuration).SetEase(Ease.OutQuad));
         seq.Append(transform.DOScale(_baseScale, _snapSquashDuration).SetEase(Ease.OutBounce));
+        
+        if (onComplete != null) seq.OnComplete(() => onComplete.Invoke());
     }
 
     private void OnDestroy()
     {
         // Thu hồi toàn bộ miếng bánh về Pool khi đĩa bị hủy (tránh thất thoát Pool khi đổi màn)
-        ClearSlices();
+        if (gameObject.scene.isLoaded)
+        {
+            ClearSlices();
+        }
     }
 
     public void ClearSlices()
@@ -293,6 +392,14 @@ public class PizzaPlate : MonoBehaviour
     public bool TryAddSlice(PizzaSliceVisual slice, out int addedIndex)
     {
         addedIndex = -1;
+        
+        // Fix NRE khi đĩa vừa được sinh ra từ ObjectPool mà chưa qua GenerateRandomSlices
+        if (_slices == null)
+        {
+            int maxSlices = (LevelManager.CurrentLevelData != null) ? LevelManager.CurrentLevelData.maxSlices : 6;
+            _slices = new PizzaSliceVisual[maxSlices];
+        }
+
         if (IsFull()) return false;
         
         for (int i = 0; i < _slices.Length; i++)
@@ -424,12 +531,40 @@ public class PizzaPlate : MonoBehaviour
 
         float angleStep = 360f / maxSlices;
 
+        // Random type cho từng slice trước, lưu vào buffer tạm để kiểm tra full-pure
+        int[] selectedTypes = new int[sliceCount];
         for (int i = 0; i < sliceCount; i++)
         {
-            // Data-driven: Random dựa trên list cho phép của Level hiện tại
             int randomTypeIndex = Random.Range(0, availableTypes.Length);
-            int selectedType = availableTypes[randomTypeIndex];
+            selectedTypes[i] = availableTypes[randomTypeIndex];
+        }
 
+        // ANTI-INSTANT-EXPLODE: Nếu sinh ra đầy 6/6 VÀ tất cả cùng 1 type → ép đổi 1 miếng sang type khác
+        if (sliceCount == maxSlices && availableTypes.Length > 1)
+        {
+            bool allSame = true;
+            for (int i = 1; i < sliceCount; i++)
+            {
+                if (selectedTypes[i] != selectedTypes[0]) { allSame = false; break; }
+            }
+
+            if (allSame)
+            {
+                int originalType = selectedTypes[0];
+                int newType;
+                do
+                {
+                    newType = availableTypes[Random.Range(0, availableTypes.Length)];
+                } while (newType == originalType);
+
+                // Đổi 1 miếng ngẫu nhiên (không phải miếng đầu, tránh pattern dễ đoán)
+                int swapIndex = Random.Range(0, sliceCount);
+                selectedTypes[swapIndex] = newType;
+            }
+        }
+
+        for (int i = 0; i < sliceCount; i++)
+        {
             // Kéo trực tiếp Component visual từ Pool (Zero GC)
             PizzaSliceVisual slice = ObjectPoolManager.Instance.GetPizzaSlice();
             
@@ -439,8 +574,37 @@ public class PizzaPlate : MonoBehaviour
             slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
             slice.transform.localScale = Vector3.one; // Ép lại scale chuẩn
             
-            slice.SetVisual(selectedType);
+            slice.SetVisual(selectedTypes[i]);
 
+            _slices[i] = slice;
+        }
+    }
+
+    public void RestoreSlices(int[] types)
+    {
+        if (LevelManager.CurrentLevelData == null) return;
+
+        ClearSlices();
+
+        int maxSlices = LevelManager.CurrentLevelData.maxSlices;
+        if (_slices == null || _slices.Length != maxSlices)
+        {
+            _slices = new PizzaSliceVisual[maxSlices];
+        }
+
+        float angleStep = 360f / maxSlices;
+
+        for (int i = 0; i < maxSlices; i++)
+        {
+            if (i >= types.Length || types[i] == -1) continue; // Ô trống
+
+            PizzaSliceVisual slice = ObjectPoolManager.Instance.GetPizzaSlice();
+            slice.transform.SetParent(this.transform, false);
+            slice.transform.localPosition = new Vector3(0, _sliceYOffset, 0);
+            slice.transform.localRotation = Quaternion.Euler(0, i * angleStep, 0);
+            slice.transform.localScale = Vector3.one;
+
+            slice.SetVisual(types[i]);
             _slices[i] = slice;
         }
     }

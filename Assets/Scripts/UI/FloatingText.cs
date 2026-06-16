@@ -6,13 +6,15 @@ using DG.Tweening;
 public class FloatingText : MonoBehaviour
 {
     private TextMeshPro _textMesh;
+    private Vector3 _originalScale;
 
     private void Awake()
     {
         _textMesh = GetComponent<TextMeshPro>();
+        _originalScale = transform.localScale;
     }
 
-    public void Setup(string text, Vector3 startPos)
+    public void Setup(string text, Vector3 startPos, float scale = 1f)
     {
         if (_textMesh == null) _textMesh = GetComponent<TextMeshPro>();
 
@@ -21,6 +23,7 @@ public class FloatingText : MonoBehaviour
         _textMesh.DOKill();
 
         transform.position = startPos;
+        transform.localScale = _originalScale * scale;
         
         // Ép chữ luôn xoay mặt về Camera
         Vector3 moveDirection = Vector3.forward; // Mặc định bay theo trục Z nếu có lỗi
@@ -31,7 +34,7 @@ public class FloatingText : MonoBehaviour
             moveDirection = Camera.main.transform.up; 
         }
 
-        _textMesh.text = text;
+        _textMesh.SetText(text);
         // KHÔNG set color ở đây để Designer tự chỉnh màu/Gradient trong Inspector.
         // Chỉ reset Alpha về 1 vì DOTween sẽ làm nó mờ đi về 0 ở cuối chu kỳ.
         _textMesh.alpha = 1f;
@@ -41,6 +44,35 @@ public class FloatingText : MonoBehaviour
         transform.DOMove(startPos + moveDirection * 1.5f, 0.8f).SetEase(Ease.OutQuad);
         
         // 2. Mờ dần về 0 trong 0.8 giây, sau khi xong thì trả về Pool
+        _textMesh.DOFade(0f, 0.8f).SetEase(Ease.InQuad).OnComplete(() =>
+        {
+            if (ObjectPoolManager.Instance != null)
+                ObjectPoolManager.Instance.ReturnFloatingText(this);
+            else
+                gameObject.SetActive(false);
+        });
+    }
+
+    // Zero-GC Overload cho điểm số (VD: "+100")
+    public void Setup(string format, int value, Vector3 startPos, float scale = 1f)
+    {
+        if (_textMesh == null) _textMesh = GetComponent<TextMeshPro>();
+        transform.DOKill();
+        _textMesh.DOKill();
+        transform.position = startPos;
+        transform.localScale = _originalScale * scale;
+        
+        Vector3 moveDirection = Vector3.forward;
+        if (Camera.main != null)
+        {
+            transform.rotation = Camera.main.transform.rotation;
+            moveDirection = Camera.main.transform.up; 
+        }
+
+        _textMesh.SetText(format, value);
+        _textMesh.alpha = 1f;
+
+        transform.DOMove(startPos + moveDirection * 1.5f, 0.8f).SetEase(Ease.OutQuad);
         _textMesh.DOFade(0f, 0.8f).SetEase(Ease.InQuad).OnComplete(() =>
         {
             if (ObjectPoolManager.Instance != null)

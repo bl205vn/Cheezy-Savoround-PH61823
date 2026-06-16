@@ -12,6 +12,12 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip _placeClip;
     [Tooltip("Tiếng báo lỗi đặt sai ô (VD: wrong)")]
     [SerializeField] private AudioClip _errorClip;
+    [Tooltip("Tiếng chúc mừng / lên cấp (Success)")]
+    [SerializeField] private AudioClip _successClip;
+    [Tooltip("Tiếng thưởng Combo")]
+    [SerializeField] private AudioClip _comboClip;
+    [Tooltip("Tiếng khi Game Over")]
+    [SerializeField] private AudioClip _gameOverClip;
     [SerializeField] private float _baseVolume = 1f;
 
     [Header("Pitch Shift (Hiệu ứng Combo)")]
@@ -37,6 +43,37 @@ public class AudioManager : MonoBehaviour
         _sfxSource = GetComponent<AudioSource>();
         _pitchSource = gameObject.AddComponent<AudioSource>();
         _pitchSource.playOnAwake = false;
+    }
+
+    private void OnEnable()
+    {
+        GameEvents.OnPlatePlaced += HandlePlatePlaced;
+        GameEvents.OnPlatePlaceFailed += HandlePlatePlaceFailed;
+        GameEvents.OnPlateExploded += HandlePlateExploded;
+        GameEvents.OnGameOver += PlayGameOverSound;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnPlatePlaced -= HandlePlatePlaced;
+        GameEvents.OnPlatePlaceFailed -= HandlePlatePlaceFailed;
+        GameEvents.OnPlateExploded -= HandlePlateExploded;
+        GameEvents.OnGameOver -= PlayGameOverSound;
+    }
+
+    private void HandlePlatePlaced(PizzaPlate plate, GridCell cell) => PlayPlaceSound();
+    private void HandlePlatePlaceFailed(PizzaPlate plate) => PlayErrorSound();
+    private void HandlePlateExploded(int pizzaType, int scoreAdded, int goldAdded) 
+    {
+        // Tận dụng lỗi thành tính năng: Nếu type == -1 (tức là bonus từ Combo), phát tiếng Combo riêng biệt
+        if (pizzaType == -1)
+        {
+            PlayComboSound();
+        }
+        else
+        {
+            PlayExplosionSound();
+        }
     }
 
     public void PlayExplosionSound()
@@ -76,6 +113,30 @@ public class AudioManager : MonoBehaviour
         if (_errorClip != null && _sfxSource != null)
         {
             _sfxSource.PlayOneShot(_errorClip, _baseVolume);
+        }
+    }
+
+    public void PlaySuccessSound()
+    {
+        if (_successClip != null && _sfxSource != null)
+        {
+            _sfxSource.PlayOneShot(_successClip, _baseVolume);
+        }
+    }
+
+    public void PlayComboSound()
+    {
+        if (_comboClip != null && _sfxSource != null)
+        {
+            _sfxSource.PlayOneShot(_comboClip, _baseVolume);
+        }
+    }
+
+    public void PlayGameOverSound()
+    {
+        if (_gameOverClip != null && _sfxSource != null)
+        {
+            _sfxSource.PlayOneShot(_gameOverClip, _baseVolume);
         }
     }
 }
