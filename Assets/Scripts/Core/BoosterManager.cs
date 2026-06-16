@@ -139,7 +139,6 @@ public class BoosterManager : MonoBehaviour
         GridCell emptyAdjacentCell = null;
         float bestScore = -1;
 
-        // Định nghĩa 4 hướng
         Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
         // Tìm đĩa đang thiếu miếng (không đầy, không rỗng) và có ít nhất 1 ô trống kề bên
