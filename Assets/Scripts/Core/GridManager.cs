@@ -946,22 +946,22 @@ public class GridManager : MonoBehaviour
         epicenter.CurrentPlate.Priority = 9;
 
         // BFS lan tỏa từ tâm chấn mới
-        Queue<GridCell> bfsQueue = new Queue<GridCell>();
-        HashSet<GridCell> visited = new HashSet<GridCell>();
+        _bfsQueue.Clear();
+        _bfsVisited.Clear();
 
-        bfsQueue.Enqueue(epicenter);
-        visited.Add(epicenter);
+        _bfsQueue.Enqueue(epicenter);
+        _bfsVisited.Add(epicenter);
 
-        while (bfsQueue.Count > 0)
+        while (_bfsQueue.Count > 0)
         {
-            GridCell current = bfsQueue.Dequeue();
+            GridCell current = _bfsQueue.Dequeue();
             int currentPrio = current.CurrentPlate.Priority;
 
             foreach (var dir in _directions)
             {
                 GridCell neighbor = GetCell(current.GridPosition + dir);
                 if (neighbor == null || !neighbor.IsOccupied) continue;
-                if (visited.Contains(neighbor)) continue;
+                if (_bfsVisited.Contains(neighbor)) continue;
 
                 int newPrio = Mathf.Max(0, currentPrio - 1);
 
@@ -970,8 +970,8 @@ public class GridManager : MonoBehaviour
                 if (newPrio > neighbor.CurrentPlate.Priority)
                 {
                     neighbor.CurrentPlate.Priority = newPrio;
-                    visited.Add(neighbor);
-                    if (newPrio > 0) bfsQueue.Enqueue(neighbor);
+                    _bfsVisited.Add(neighbor);
+                    if (newPrio > 0) _bfsQueue.Enqueue(neighbor);
                 }
             }
         }
