@@ -62,25 +62,31 @@ public class InputManager : MonoBehaviour
         // Ưu tiên BoosterManager nếu đang chờ target (di chuyển/xóa đĩa)
         if (BoosterManager.Instance != null && BoosterManager.Instance.IsWaitingForTarget)
         {
-            if (Input.GetMouseButtonDown(0))
+            if (BoosterManager.Instance.IsMoveBoosterActive)
             {
-                if (UnityEngine.EventSystems.EventSystem.current != null)
+                // Cho phép kéo thả bình thường (bỏ qua return để chạy TryPickUpPlate ở dưới)
+            }
+            else
+            {
+                if (Input.GetMouseButtonDown(0))
                 {
-                    if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() ||
-                        (Input.touchCount > 0 && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId)))
+                    if (UnityEngine.EventSystems.EventSystem.current != null)
                     {
-                        return; // Bỏ qua nếu chạm vào UI
+                        if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() ||
+                            (Input.touchCount > 0 && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId)))
+                        {
+                            return; // Bỏ qua nếu chạm vào UI
+                        }
+                    }
+
+                    Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+                    if (Physics.Raycast(ray, out RaycastHit hit))
+                    {
+                        BoosterManager.Instance.HandleTap(hit);
                     }
                 }
-
-                Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
-                // Bắn tia ray với LayerMask mặc định (có thể bao trùm lưới hoặc đĩa)
-                if (Physics.Raycast(ray, out RaycastHit hit))
-                {
-                    BoosterManager.Instance.HandleTap(hit);
-                }
+                return; // Khóa input thường đối với các Booster khác (như Trash)
             }
-            return; // Khóa input thường
         }
 
         if (Input.GetMouseButtonDown(0))
@@ -114,11 +120,22 @@ public class InputManager : MonoBehaviour
         {
             if (hit.collider.TryGetComponent(out PizzaPlate plate))
             {
-                // Chỉ cho phép bốc đĩa từ khay VÀ đĩa đó không phải đang bay về khay
-                if (TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate) && !plate.IsReturning)
+                // Nếu đang dùng Move Booster, cho phép bốc đĩa từ Grid
+                bool isMoveBooster = BoosterManager.Instance != null && BoosterManager.Instance.IsMoveBoosterActive;
+                GridCell plateCell = GridManager.Instance != null ? GridManager.Instance.GetCellOfPlate(plate) : null;
+                
+                bool fromTray = TrayManager.Instance != null && TrayManager.Instance.IsPlateInTray(plate);
+                bool fromGridAndBoosted = isMoveBooster && plateCell != null;
+
+                if ((fromTray || fromGridAndBoosted) && !plate.IsReturning)
                 {
                     _draggedPlate = plate;
                     _draggedPlate.PickUp();
+                    
+                    if (fromGridAndBoosted)
+                    {
+                        plateCell.ClearPlate(); // Nhấc khỏi lưới
+                    }
                 }
             }
         }
@@ -207,6 +224,11 @@ public class InputManager : MonoBehaviour
                 PizzaPlate plateToPlace = _draggedPlate;
                 _draggedPlate = null;
 
+                if (BoosterManager.Instance != null && BoosterManager.Instance.IsMoveBoosterActive)
+                {
+                    BoosterManager.Instance.CompleteMoveBooster();
+                }
+
                 // Snap vào ô lưới và chờ animation xong mới bắn event
                 cell.PlacePlate(plateToPlace, () => {
                     GameEvents.TriggerPlatePlaced(plateToPlace, cell);
@@ -218,6 +240,18 @@ public class InputManager : MonoBehaviour
 
         // Không tìm thấy ô hoặc ô đã có đĩa -> trả về chỗ cũ
         GameEvents.TriggerPlatePlaceFailed(_draggedPlate);
+        if (BoosterManager.Instance != null && BoosterManager.Instance.IsMoveBoosterActive)
+        {
+            if (_draggedPlate.OriginalParent != null)
+            {
+                GridCell originalCell = _draggedPlate.OriginalParent.GetComponent<GridCell>();
+                if (originalCell != null)
+                {
+                    originalCell.RestorePlateLogical(_draggedPlate);
+                }
+            }
+        }
+        
         _draggedPlate.PlayShakeAndReturn();
         _draggedPlate = null;
     }

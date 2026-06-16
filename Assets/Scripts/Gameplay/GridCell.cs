@@ -76,4 +76,10 @@ public class GridCell : MonoBehaviour
         IsOccupied = false;
         CurrentPlate = null;
     }
+
+    public void RestorePlateLogical(PizzaPlate plate)
+    {
+        IsOccupied = true;
+        CurrentPlate = plate;
+    }
 }

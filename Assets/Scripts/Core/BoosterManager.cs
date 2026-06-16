@@ -6,12 +6,12 @@ public class BoosterManager : MonoBehaviour
 {
     public static BoosterManager Instance { get; private set; }
 
-    public enum Phase { Idle, MoveSource, MoveDest, TrashTarget }
+    public enum Phase { Idle, MoveSource, TrashTarget }
     private Phase _currentPhase = Phase.Idle;
 
     public bool IsWaitingForTarget => _currentPhase != Phase.Idle;
+    public bool IsMoveBoosterActive => _currentPhase == Phase.MoveSource;
 
-    private GridCell _moveSourceCell;
     private System.Action _onConsumeCallback;
 
     private void Awake()
@@ -49,7 +49,6 @@ public class BoosterManager : MonoBehaviour
     private void CancelBooster()
     {
         _currentPhase = Phase.Idle;
-        _moveSourceCell = null;
         _onConsumeCallback = null;
         Debug.Log("[BoosterManager] Booster cancelled (no valid target or user aborted).");
     }
@@ -57,7 +56,6 @@ public class BoosterManager : MonoBehaviour
     private void FinishBooster()
     {
         _currentPhase = Phase.Idle;
-        _moveSourceCell = null;
         
         // Trừ số lượng booster, update UI, Trigger Event...
         _onConsumeCallback?.Invoke();
@@ -85,40 +83,7 @@ public class BoosterManager : MonoBehaviour
 
         if (targetCell == null) return;
 
-        if (_currentPhase == Phase.MoveSource)
-        {
-            if (targetCell.IsOccupied)
-            {
-                _moveSourceCell = targetCell;
-                _currentPhase = Phase.MoveDest;
-                // Có thể thêm hiệu ứng nhấp nháy cho đĩa nguồn ở đây
-                targetCell.CurrentPlate.transform.DOScale(1.1f, 0.2f).SetLoops(-1, LoopType.Yoyo).SetId("MoveHighlight");
-            }
-        }
-        else if (_currentPhase == Phase.MoveDest)
-        {
-            if (targetCell == _moveSourceCell)
-            {
-                // Tap lại nguồn -> Hủy
-                DOTween.Kill("MoveHighlight");
-                _moveSourceCell.CurrentPlate.transform.localScale = _moveSourceCell.CurrentPlate.BaseScale;
-                CancelBooster();
-                return;
-            }
-
-            DOTween.Kill("MoveHighlight");
-            _moveSourceCell.CurrentPlate.transform.localScale = _moveSourceCell.CurrentPlate.BaseScale;
-
-            if (ApplyMove(_moveSourceCell, targetCell))
-            {
-                FinishBooster();
-            }
-            else
-            {
-                CancelBooster();
-            }
-        }
-        else if (_currentPhase == Phase.TrashTarget)
+        if (_currentPhase == Phase.TrashTarget)
         {
             if (targetCell.IsOccupied)
             {
@@ -132,6 +97,11 @@ public class BoosterManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void CompleteMoveBooster()
+    {
+        FinishBooster();
     }
 
     // ----------------------------------------------------
@@ -315,40 +285,7 @@ public class BoosterManager : MonoBehaviour
         return true;
     }
 
-    private bool ApplyMove(GridCell source, GridCell dest)
-    {
-        if (source == null || dest == null) return false;
-        
-        PizzaPlate sourcePlate = source.CurrentPlate;
-        PizzaPlate destPlate = dest.CurrentPlate;
 
-        // Xóa liên kết cũ
-        source.ClearPlate();
-        dest.ClearPlate();
-
-        // Hoán đổi
-        if (destPlate != null)
-        {
-            source.PlacePlate(destPlate, null);
-            // Có thể dùng tween để bay chéo sang nhau
-            destPlate.transform.DOMove(source.GetDropPosition(), 0.3f).SetEase(Ease.InOutQuad);
-        }
-
-        if (sourcePlate != null)
-        {
-            dest.PlacePlate(sourcePlate, null);
-            sourcePlate.transform.DOMove(dest.GetDropPosition(), 0.3f).SetEase(Ease.InOutQuad);
-        }
-
-        // Trigger cascade cho cả 2 ô
-        if (GridManager.Instance != null)
-        {
-            // GridManager.TriggerCascade chỉ xử lý 1 cell và tự đổi State. 
-            // Gọi cho 2 ô có thể gây đụng độ priority, nên chọn ô đích để kick.
-            GridManager.Instance.TriggerCascade(dest);
-        }
-        return true;
-    }
 
     private bool ApplyTrash(GridCell target)
     {

@@ -21,6 +21,7 @@ public class PizzaPlate : MonoBehaviour
 
     private Vector3 _originalPosition;
     private Transform _originalParent;
+    public Transform OriginalParent => _originalParent;
     private PizzaSliceVisual[] _slices; // Mảng chứa các miếng theo index/góc quay
 
     public PizzaSliceVisual[] Slices => _slices; // Cho phép các Manager đọc dữ liệu miếng bánh trên đĩa
@@ -240,7 +241,10 @@ public class PizzaPlate : MonoBehaviour
     private void OnDestroy()
     {
         // Thu hồi toàn bộ miếng bánh về Pool khi đĩa bị hủy (tránh thất thoát Pool khi đổi màn)
-        ClearSlices();
+        if (gameObject.scene.isLoaded)
+        {
+            ClearSlices();
+        }
     }
 
     public void ClearSlices()
