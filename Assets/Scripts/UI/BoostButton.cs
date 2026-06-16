@@ -17,6 +17,13 @@ public class BoostButton : MonoBehaviour
     [SerializeField] private BoosterType _boosterType;
     [SerializeField] private TMP_Text _quantityText;
 
+    private UnityEngine.UI.Image _iconImage;
+
+    private void Awake()
+    {
+        _iconImage = GetComponent<UnityEngine.UI.Image>();
+    }
+
     private void OnEnable()
     {
         _activeButtons.Add(this);
@@ -101,6 +108,30 @@ public class BoostButton : MonoBehaviour
             if (_activeButtons[i] != null)
             {
                 _activeButtons[i].UpdateQuantityDisplay();
+            }
+        }
+    }
+
+    public void SetHighlight(bool isActive)
+    {
+        if (_iconImage != null)
+        {
+            // Khi chọn thì tối đi, bình thường thì sáng trắng
+            _iconImage.color = isActive ? new Color(0.6f, 0.6f, 0.6f, 1f) : Color.white;
+        }
+    }
+
+    public static void UpdateAllHighlights()
+    {
+        if (BoosterManager.Instance == null) return;
+        
+        var activeType = BoosterManager.Instance.ActiveBoosterType;
+        for (int i = 0; i < _activeButtons.Count; i++)
+        {
+            if (_activeButtons[i] != null)
+            {
+                bool isSelected = (activeType != null && _activeButtons[i]._boosterType == activeType.Value);
+                _activeButtons[i].SetHighlight(isSelected);
             }
         }
     }

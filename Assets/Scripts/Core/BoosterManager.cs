@@ -12,6 +12,9 @@ public class BoosterManager : MonoBehaviour
     public bool IsWaitingForTarget => _currentPhase != Phase.Idle;
     public bool IsMoveBoosterActive => _currentPhase == Phase.MoveSource;
 
+    public BoostButton.BoosterType? ActiveBoosterType => _activeBoosterType;
+    private BoostButton.BoosterType? _activeBoosterType;
+
     private System.Action _onConsumeCallback;
 
     private void Awake()
@@ -26,7 +29,20 @@ public class BoosterManager : MonoBehaviour
 
     public void ActivateBooster(BoostButton.BoosterType type, System.Action onConsume)
     {
-        if (_currentPhase != Phase.Idle) return; // Đang chạy boost khác
+        if (_currentPhase != Phase.Idle)
+        {
+            // Bấm lại đúng loại cũ -> Huỷ
+            if (_activeBoosterType == type && (type == BoostButton.BoosterType.Move || type == BoostButton.BoosterType.Trash))
+            {
+                CancelBooster();
+                return;
+            }
+            
+            // Bấm loại khác -> Huỷ cái cũ, tiếp tục bật cái mới
+            CancelBooster();
+        }
+
+        _activeBoosterType = type;
         _onConsumeCallback = onConsume;
 
         switch (type)
@@ -44,22 +60,28 @@ public class BoosterManager : MonoBehaviour
                 _currentPhase = Phase.TrashTarget;
                 break;
         }
+
+        BoostButton.UpdateAllHighlights();
     }
 
     private void CancelBooster()
     {
         _currentPhase = Phase.Idle;
+        _activeBoosterType = null;
         _onConsumeCallback = null;
+        BoostButton.UpdateAllHighlights();
         Debug.Log("[BoosterManager] Booster cancelled (no valid target or user aborted).");
     }
 
     private void FinishBooster()
     {
         _currentPhase = Phase.Idle;
+        _activeBoosterType = null;
         
         // Trừ số lượng booster, update UI, Trigger Event...
         _onConsumeCallback?.Invoke();
         _onConsumeCallback = null;
+        BoostButton.UpdateAllHighlights();
     }
 
     // InputManager sẽ gọi hàm này nếu IsWaitingForTarget = true

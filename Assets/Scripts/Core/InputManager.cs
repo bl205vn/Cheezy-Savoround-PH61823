@@ -173,8 +173,18 @@ public class InputManager : MonoBehaviour
             {
                 if (_ghostPreview != null)
                 {
-                    // Lấy đúng scale gốc của đĩa (khi đang nằm trên mâm/bàn) để gán cho Ghost
-                    _ghostPreview.transform.localScale = _draggedPlate.BaseScale;
+                    // Scale bóng mờ theo world scale của đĩa (kể cả khi đĩa nằm trên GridCell bị scale)
+                    Vector3 ghostScale = _draggedPlate.BaseScale;
+                    if (_draggedPlate.OriginalParent != null)
+                    {
+                        Vector3 parentScale = _draggedPlate.OriginalParent.lossyScale;
+                        ghostScale = new Vector3(
+                            _draggedPlate.BaseScale.x * parentScale.x,
+                            _draggedPlate.BaseScale.y * parentScale.y,
+                            _draggedPlate.BaseScale.z * parentScale.z
+                        );
+                    }
+                    _ghostPreview.transform.localScale = ghostScale;
                     _ghostPreview.ShowAt(currentTargetCell.GetDropPosition());
                 }
             }
@@ -240,6 +250,7 @@ public class InputManager : MonoBehaviour
 
         // Không tìm thấy ô hoặc ô đã có đĩa -> trả về chỗ cũ
         GameEvents.TriggerPlatePlaceFailed(_draggedPlate);
+        
         if (BoosterManager.Instance != null && BoosterManager.Instance.IsMoveBoosterActive)
         {
             if (_draggedPlate.OriginalParent != null)
