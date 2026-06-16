@@ -201,19 +201,33 @@ public class BoosterManager : MonoBehaviour
             PizzaPlate newPlate = ObjectPoolManager.Instance.GetPizzaPlate();
             newPlate.ClearSlices();
             
+            // Đặt đĩa xuống lưới ngay lập tức để lấy chuẩn Scale và Parent
+            emptyAdjacentCell.PlacePlateInstant(newPlate);
+            
+            Sequence seq = DOTween.Sequence();
+
             for (int i = 0; i < slicesNeeded; i++)
             {
                 PizzaSliceVisual newSlice = ObjectPoolManager.Instance.GetPizzaSlice();
                 newSlice.SetVisual(targetMajority);
+                
+                // Set vị trí ban đầu trên cao
+                newSlice.transform.position = newPlate.transform.position + Vector3.up * (3f + i * 0.5f);
+                
                 newPlate.TryAddSlice(newSlice, out _);
+                newSlice.transform.localScale = Vector3.one; // Khắc phục lỗi sai scale
+                
+                // Rớt xuống đĩa
+                Tween dropTween = newSlice.transform.DOLocalMove(new Vector3(0, newPlate.SliceYOffset, 0), 0.3f).SetEase(Ease.OutBack);
+                seq.Insert(i * 0.1f, dropTween);
             }
 
-            // Đặt đĩa mới vào ô kề bên
-            // Thay vì dùng GridManager handle input, ta gọi PlacePlate trực tiếp rồi kích hoạt TriggerCascade
-            emptyAdjacentCell.PlacePlate(newPlate, () => 
+            // Đợi rớt xong hết mới gộp nổ
+            seq.OnComplete(() => 
             {
-                grid.TriggerCascade(emptyAdjacentCell);
+                if (grid != null) grid.TriggerCascade(emptyAdjacentCell);
             });
+            
             return true;
         }
 
@@ -276,18 +290,28 @@ public class BoosterManager : MonoBehaviour
 
         // 2. Điền đủ 6/6 tinh khiết
         int slicesToFill = 6 - targetPlate.GetTotalSlices();
+        Sequence seq = DOTween.Sequence();
+
         for (int i = 0; i < slicesToFill; i++)
         {
             PizzaSliceVisual newSlice = ObjectPoolManager.Instance.GetPizzaSlice();
             newSlice.SetVisual(targetMajority);
+            
             // Spawn từ trên cao rơi xuống đĩa
-            newSlice.transform.position = targetPlate.transform.position + Vector3.up * 3f;
+            newSlice.transform.position = targetPlate.transform.position + Vector3.up * (3f + i * 0.5f);
             targetPlate.TryAddSlice(newSlice, out _);
-            newSlice.transform.DOLocalMove(new Vector3(0, targetPlate.SliceYOffset, 0), 0.3f).SetEase(Ease.OutBack);
+            newSlice.transform.localScale = Vector3.one; // Khắc phục lỗi sai scale
+            
+            Tween dropTween = newSlice.transform.DOLocalMove(new Vector3(0, targetPlate.SliceYOffset, 0), 0.3f).SetEase(Ease.OutBack);
+            seq.Insert(i * 0.1f, dropTween);
         }
 
-        // 3. Kick cascade để nổ
-        grid.TriggerCascade(bestCell);
+        // 3. Kick cascade để nổ sau khi rớt xong
+        seq.OnComplete(() => 
+        {
+            if (grid != null) grid.TriggerCascade(bestCell);
+        });
+        
         return true;
     }
 
