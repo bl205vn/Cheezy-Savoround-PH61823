@@ -388,6 +388,14 @@ public class PizzaPlate : MonoBehaviour
     public bool TryAddSlice(PizzaSliceVisual slice, out int addedIndex)
     {
         addedIndex = -1;
+        
+        // Fix NRE khi đĩa vừa được sinh ra từ ObjectPool mà chưa qua GenerateRandomSlices
+        if (_slices == null)
+        {
+            int maxSlices = (LevelManager.CurrentLevelData != null) ? LevelManager.CurrentLevelData.maxSlices : 6;
+            _slices = new PizzaSliceVisual[maxSlices];
+        }
+
         if (IsFull()) return false;
         
         for (int i = 0; i < _slices.Length; i++)

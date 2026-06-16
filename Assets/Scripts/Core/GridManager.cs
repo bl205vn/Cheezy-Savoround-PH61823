@@ -194,6 +194,39 @@ public class GridManager : MonoBehaviour
         return null;
     }
 
+    public System.Collections.Generic.IEnumerable<GridCell> GetAllCells()
+    {
+        return _gridCells.Values;
+    }
+
+    public GridCell GetCellOfPlate(PizzaPlate plate)
+    {
+        foreach (var cell in _gridCells.Values)
+        {
+            if (cell.CurrentPlate == plate) return cell;
+        }
+        return null;
+    }
+
+    public void TriggerCascade(GridCell centerCell)
+    {
+        _mergeSequenceCount = 0; 
+        _explosionCountThisTurn = 0; 
+        CalculatePriorities(centerCell); 
+        EnqueueCell(centerCell);
+        
+        foreach (var dir in _directions)
+        {
+            GridCell neighbor = GetCell(centerCell.GridPosition + dir);
+            if (neighbor != null && neighbor.IsOccupied)
+            {
+                EnqueueCell(neighbor);
+            }
+        }
+        
+        GameStateManager.Instance.ChangeState(GameStateManager.Instance.CheckingCombo);
+    }
+
     private void CalculatePriorities(GridCell startCell)
     {
         // Khởi tạo ưu tiên 0 cho toàn lưới

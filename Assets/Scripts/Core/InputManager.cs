@@ -59,6 +59,30 @@ public class InputManager : MonoBehaviour
             return;
         }
 
+        // Ưu tiên BoosterManager nếu đang chờ target (di chuyển/xóa đĩa)
+        if (BoosterManager.Instance != null && BoosterManager.Instance.IsWaitingForTarget)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (UnityEngine.EventSystems.EventSystem.current != null)
+                {
+                    if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() ||
+                        (Input.touchCount > 0 && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId)))
+                    {
+                        return; // Bỏ qua nếu chạm vào UI
+                    }
+                }
+
+                Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+                // Bắn tia ray với LayerMask mặc định (có thể bao trùm lưới hoặc đĩa)
+                if (Physics.Raycast(ray, out RaycastHit hit))
+                {
+                    BoosterManager.Instance.HandleTap(hit);
+                }
+            }
+            return; // Khóa input thường
+        }
+
         if (Input.GetMouseButtonDown(0))
         {
             TryPickUpPlate();
