@@ -7,4 +7,7 @@ public class LevelData
     public int gridWidth;
     public int gridHeight;
     public int holdSlotCount;
+    public int maxSlices = 6;
+    public int[] availablePizzaTypes; // Chứa danh sách ID các loại pizza xuất hiện ở level này (ví dụ: [0, 1] cho màn 1)
+    public float[] sliceCountProbabilities; // Tỉ lệ % sinh 1, 2, 3, 4, 5, 6 miếng. Ví dụ: [10, 40, 30, 20, 0, 0]
 }

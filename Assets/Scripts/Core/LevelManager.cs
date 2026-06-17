@@ -2,22 +2,48 @@ using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
+    public static LevelManager Instance { get; private set; }
+    public static LevelData CurrentLevelData { get; private set; }
+
     [SerializeField] private GridManager _gridManager;
     [SerializeField] private TrayManager _trayManager;
     
-    [Header("Testing")]
-    [SerializeField] private TextAsset _testLevelJson; // Kéo file JSON vào đây để test trực tiếp
+    [Header("Debug")]
+    [Tooltip("Bật để sử dụng file Test và vẽ Gizmos")]
+    [SerializeField] private bool _enableDebug = false; 
+    [SerializeField] private TextAsset _testLevelJson; 
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
 
     private void Start()
     {
-        if (_testLevelJson != null)
+        if (_enableDebug && _testLevelJson != null)
         {
             LoadFromTextAsset(_testLevelJson);
         }
         else
         {
-            LoadLevel(1); // Mặc định load màn 1
+            // Liên kết file Save với Level Loading
+            int currentLevel = SaveLoadManager.Data != null ? SaveLoadManager.Data.CurrentLevel : 1;
+            if (currentLevel > 30) currentLevel = 30; // Tạm giới hạn 30 level
+            LoadLevel(currentLevel); 
         }
+    }
+
+    public void LoadNextLevel()
+    {
+        int nextLevel = SaveLoadManager.Data != null ? SaveLoadManager.Data.CurrentLevel : 1;
+        if (nextLevel > 30) nextLevel = 30;
+        
+        LoadLevel(nextLevel);
     }
 
     public void LoadLevel(int levelId)
@@ -36,6 +62,18 @@ public class LevelManager : MonoBehaviour
         LevelData data = JsonUtility.FromJson<LevelData>(jsonFile.text);
         if (data == null) return;
         
+        CurrentLevelData = data; // Cache data cho các class khác sử dụng (Data-Driven)
+
+        // Khởi tạo Pool động dựa trên LevelData
+        if (ObjectPoolManager.Instance != null)
+        {
+            ObjectPoolManager.Instance.InitializePool(data.gridWidth, data.gridHeight, data.holdSlotCount, data.maxSlices);
+        }
+
+        bool hasSavedProgress = SaveLoadManager.Data != null 
+            && SaveLoadManager.Data.CurrentLevelProgress != null 
+            && SaveLoadManager.Data.CurrentLevelProgress.levelId == data.levelId;
+
         if (_gridManager != null)
         {
             _gridManager.GenerateGrid(data.levelId, data.gridWidth, data.gridHeight);
@@ -43,13 +81,24 @@ public class LevelManager : MonoBehaviour
         
         if (_trayManager != null)
         {
-            _trayManager.GenerateTray(data.holdSlotCount);
+            _trayManager.GenerateTray(data.holdSlotCount, !hasSavedProgress);
+        }
+
+        // --- Khôi phục tiến trình (nếu có) ---
+        if (hasSavedProgress)
+        {
+            if (_gridManager != null)
+                _gridManager.RestoreState(SaveLoadManager.Data.CurrentLevelProgress.occupiedCells);
+            if (_trayManager != null)
+                _trayManager.RestoreState(SaveLoadManager.Data.CurrentLevelProgress.traySlots);
         }
     }
 
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
+        if (!_enableDebug) return;
+        
         // Preview level trong Editor mà không cần Play
         if (_testLevelJson != null && _gridManager != null && _trayManager != null)
         {
