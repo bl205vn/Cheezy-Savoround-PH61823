@@ -93,6 +93,7 @@ public static class SaveLoadManager
             Data.CurrentSkinId = "plate_01";
         }
         // Apply TargetFPS (hardcoded in GameSettings)
+        QualitySettings.vSyncCount = 0; // Tắt VSync để điện thoại không tự động ép về 30 FPS
         Application.targetFrameRate = GameSettings.TargetFPS;
     }
 
