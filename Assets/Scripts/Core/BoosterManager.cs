@@ -190,6 +190,7 @@ public class BoosterManager : MonoBehaviour
         if (ObjectPoolManager.Instance != null)
         {
             PizzaPlate newPlate = ObjectPoolManager.Instance.GetPizzaPlate();
+            newPlate.ApplyCurrentSkin(); // Fix: Áp dụng Skin đang chọn cho đĩa mới sinh ra
             newPlate.ClearSlices();
             
             // Đặt đĩa xuống lưới ngay lập tức để lấy chuẩn Scale và Parent
